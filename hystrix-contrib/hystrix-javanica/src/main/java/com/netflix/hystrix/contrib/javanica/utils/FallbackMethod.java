@@ -93,8 +93,9 @@ public class FallbackMethod {
     }
 
     public void validateReturnType(Method commandMethod) throws FallbackDefinitionException {
-        if (isPresent()) {
-            Class<?> commandReturnType = commandMethod.getReturnType();
+        if (isPresent()) {//加HystrixCommand注解的方法是否存在，这里一般返回true
+            Class<?> commandReturnType = commandMethod.getReturnType();//获得commandMethod方法的返回类型
+            //判断返回类型是否是OBSERVABLE类型，是的话，返回OBSERVABLE
             if (ExecutionType.OBSERVABLE == ExecutionType.getExecutionType(commandReturnType)) {
                 if (ExecutionType.OBSERVABLE != getExecutionType()) {
                     Type commandParametrizedType = commandMethod.getGenericReturnType();
@@ -113,7 +114,7 @@ public class FallbackMethod {
                     validateReturnType(commandMethod, method);
                 }
 
-
+                //判断返回类型是否是future类型，是的话，返回ASYNCHRONOUS
             } else if (ExecutionType.ASYNCHRONOUS == ExecutionType.getExecutionType(commandReturnType)) {
                 if (isCommand() && ExecutionType.ASYNCHRONOUS == getExecutionType()) {
                     validateReturnType(commandMethod, method);
@@ -135,6 +136,7 @@ public class FallbackMethod {
                 if (ExecutionType.OBSERVABLE == getExecutionType()) {
                     throw new FallbackDefinitionException(createErrorMsg(commandMethod, method, "fallback cannot return Observable if command isn't observable."));
                 }
+                //检查fallback方法和command注解的方法的返回值是否匹配
                 validateReturnType(commandMethod, method);
             }
 

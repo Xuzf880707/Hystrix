@@ -42,14 +42,18 @@ public class HystrixCommandBuilder {
     private final List<Class<? extends Throwable>> ignoreExceptions;
     private final ExecutionType executionType;
 
+    /****
+     *
+     * @param builder
+     */
     public HystrixCommandBuilder(Builder builder) {
-        this.setterBuilder = builder.setterBuilder;
-        this.commandActions = builder.commandActions;
-        this.cacheResultInvocationContext = builder.cacheResultInvocationContext;
-        this.cacheRemoveInvocationContext = builder.cacheRemoveInvocationContext;
-        this.collapsedRequests = builder.collapsedRequests;
-        this.ignoreExceptions = builder.ignoreExceptions;
-        this.executionType = builder.executionType;
+        this.setterBuilder = builder.setterBuilder;//GenericSetterBuilder
+        this.commandActions = builder.commandActions;//包装的HystrixCommand的Action
+        this.cacheResultInvocationContext = builder.cacheResultInvocationContext;//是否采用resultCache的上下文
+        this.cacheRemoveInvocationContext = builder.cacheRemoveInvocationContext;//是否采用removeCache的上下文
+        this.collapsedRequests = builder.collapsedRequests;//合并结果集的上下文
+        this.ignoreExceptions = builder.ignoreExceptions;//配置忽略的异常的上下文
+        this.executionType = builder.executionType;//执行类型
     }
 
     public static <ResponseType> Builder builder() {
@@ -92,6 +96,7 @@ public class HystrixCommandBuilder {
         private CacheInvocationContext<CacheRemove> cacheRemoveInvocationContext;
         private Collection<HystrixCollapser.CollapsedRequest<ResponseType, Object>> collapsedRequests = Collections.emptyList();
         private List<Class<? extends Throwable>> ignoreExceptions = Collections.emptyList();
+        //默认是同步的,这个参数控制调用fallback的方法
         private ExecutionType executionType = ExecutionType.SYNCHRONOUS;
 
         /**

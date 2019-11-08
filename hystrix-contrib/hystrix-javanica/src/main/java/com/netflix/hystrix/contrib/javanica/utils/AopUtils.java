@@ -86,11 +86,18 @@ public final class AopUtils {
      * @param parameterTypes the parameter array
      * @return a {@link Method} object or null if method doesn't exist
      */
+    /***
+     *
+     * @param type 查找的类
+     * @param methodName 方法
+     * @param parameterTypes 参数类型
+     * @return
+     */
     public static Method getDeclaredMethod(Class<?> type, String methodName, Class<?>... parameterTypes) {
         Method method = null;
         try {
             method = type.getDeclaredMethod(methodName, parameterTypes);
-            if(method.isBridge()){
+            if(method.isBridge()){//是否是桥接方法
                 method = MethodProvider.getInstance().unbride(method, type);
             }
         } catch (NoSuchMethodException e) {

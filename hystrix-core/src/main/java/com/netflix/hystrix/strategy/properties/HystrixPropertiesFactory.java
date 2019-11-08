@@ -60,6 +60,7 @@ public class HystrixPropertiesFactory {
      */
     public static HystrixCommandProperties getCommandProperties(HystrixCommandKey key, HystrixCommandProperties.Setter builder) {
         HystrixPropertiesStrategy hystrixPropertiesStrategy = HystrixPlugins.getInstance().getPropertiesStrategy();
+        //获得HystrixCommand的key
         String cacheKey = hystrixPropertiesStrategy.getCommandPropertiesCacheKey(key, builder);
         if (cacheKey != null) {
             HystrixCommandProperties properties = commandProperties.get(cacheKey);
@@ -70,8 +71,9 @@ public class HystrixPropertiesFactory {
                     builder = HystrixCommandProperties.Setter();
                 }
                 // create new instance
+                //根据commandKey创建一个 HystrixPropertiesCommandDefault
                 properties = hystrixPropertiesStrategy.getCommandProperties(key, builder);
-                // cache and return
+                // cache and return 将commandKey对应的HystrixCommandProperties放到本地内存commandProperties中
                 HystrixCommandProperties existing = commandProperties.putIfAbsent(cacheKey, properties);
                 if (existing == null) {
                     return properties;

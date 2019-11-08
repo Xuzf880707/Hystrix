@@ -65,6 +65,12 @@ public class HystrixRequestCache {
         this.concurrencyStrategy = concurrencyStrategy;
     }
 
+    /****
+     *
+     * @param key commandKey
+     * @param concurrencyStrategy 并发策略
+     * @return
+     */
     public static HystrixRequestCache getInstance(HystrixCommandKey key, HystrixConcurrencyStrategy concurrencyStrategy) {
         return getInstance(new RequestCacheKey(key, concurrencyStrategy), concurrencyStrategy);
     }
@@ -218,14 +224,22 @@ public class HystrixRequestCache {
 
     }
 
+    /****
+     * RequestCacheKey 本次请求的缓存Key
+     */
     private static class RequestCacheKey {
         private final short type; // used to differentiate between Collapser/Command if key is same between them
         private final String key;
         private final HystrixConcurrencyStrategy concurrencyStrategy;
 
+        /***
+         *
+         * @param commandKey commandKey
+         * @param concurrencyStrategy 并发策略
+         */
         private RequestCacheKey(HystrixCommandKey commandKey, HystrixConcurrencyStrategy concurrencyStrategy) {
             type = 1;
-            if (commandKey == null) {
+            if (commandKey == null) { //
                 this.key = null;
             } else {
                 this.key = commandKey.name();

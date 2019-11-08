@@ -38,6 +38,8 @@ import static org.objectweb.asm.Opcodes.ASM5;
 
 /**
  * Created by dmgcodevil
+ * 这个类维护了一个单实例的MethodProvider
+ *
  */
 public final class MethodProvider {
 
@@ -68,7 +70,15 @@ public final class MethodProvider {
      * @param extended      true if the given commandMethod was derived using additional parameter, otherwise - false
      * @return new instance of {@link FallbackMethod} or {@link FallbackMethod#ABSENT} if there is no suitable fallback method for the given command
      */
+    /***
+     *
+     * @param enclosingType 添加了HystrixCommand注解的类
+     * @param commandMethod  添加了HystrixCommand的注解的类的方法
+     * @param extended 是否支持拓展，这个属性主要是builder里的
+     * @return
+     */
     public FallbackMethod getFallbackMethod(Class<?> enclosingType, Method commandMethod, boolean extended) {
+        //判断方法上是否有HystrixCommand注解，有的话则查找是否定义了相应的fallbackMethod
         if (commandMethod.isAnnotationPresent(HystrixCommand.class)) {
             return FALLBACK_METHOD_FINDER.find(enclosingType, commandMethod, extended);
         }

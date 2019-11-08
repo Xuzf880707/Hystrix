@@ -67,13 +67,13 @@ public class HystrixMetricsPublisherFactory {
     /**
      * Get an instance of {@link HystrixMetricsPublisherCommand} with the given factory {@link HystrixMetricsPublisher} implementation for each {@link HystrixCommand} instance.
      * 
-     * @param commandKey
+     * @param commandKey   commandKey
      *            Pass-thru to {@link HystrixMetricsPublisher#getMetricsPublisherForCommand} implementation
-     * @param commandOwner
+     * @param commandOwner groupKey
      *            Pass-thru to {@link HystrixMetricsPublisher#getMetricsPublisherForCommand} implementation
-     * @param metrics
+     * @param metrics 埋点收集对象
      *            Pass-thru to {@link HystrixMetricsPublisher#getMetricsPublisherForCommand} implementation
-     * @param circuitBreaker
+     * @param circuitBreaker 熔断器
      *            Pass-thru to {@link HystrixMetricsPublisher#getMetricsPublisherForCommand} implementation
      * @param properties
      *            Pass-thru to {@link HystrixMetricsPublisher#getMetricsPublisherForCommand} implementation

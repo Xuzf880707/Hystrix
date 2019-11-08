@@ -116,8 +116,9 @@ public class HystrixCommandMetrics extends HystrixMetrics {
      */
     public static HystrixCommandMetrics getInstance(HystrixCommandKey key, HystrixCommandGroupKey commandGroup, HystrixThreadPoolKey threadPoolKey, HystrixCommandProperties properties) {
         // attempt to retrieve from cache first
+        //检查commandkey对应的HystrixCommandMetrics是否已存在
         HystrixCommandMetrics commandMetrics = metrics.get(key.name());
-        if (commandMetrics != null) {
+        if (commandMetrics != null) {//存在则直接返回这个
             return commandMetrics;
         } else {
             synchronized (HystrixCommandMetrics.class) {
@@ -125,12 +126,14 @@ public class HystrixCommandMetrics extends HystrixMetrics {
                 if (existingMetrics != null) {
                     return existingMetrics;
                 } else {
+                    //创建一个线程池key
                     HystrixThreadPoolKey nonNullThreadPoolKey;
                     if (threadPoolKey == null) {
                         nonNullThreadPoolKey = HystrixThreadPoolKey.Factory.asKey(commandGroup.name());
                     } else {
                         nonNullThreadPoolKey = threadPoolKey;
                     }
+                    //根据commandKey、group、线程池key创建一个HystrixCommandMetrics
                     HystrixCommandMetrics newCommandMetrics = new HystrixCommandMetrics(key, commandGroup, nonNullThreadPoolKey, properties, HystrixPlugins.getInstance().getEventNotifier());
                     metrics.putIfAbsent(key.name(), newCommandMetrics);
                     return newCommandMetrics;
