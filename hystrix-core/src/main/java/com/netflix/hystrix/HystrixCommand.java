@@ -389,7 +389,7 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
         final Future<R> delegate = toObservable()//初始化一个Observable
                 .toBlocking()//将Observable包装成一个阻塞的BlockingObservable
                 .toFuture();//将BlockingObservable包装成一个异步的Future，同时关联了一个Subscription
-        final Future<R> f = new Future<R>() {
+        final Future<R> f = new Future<R>() {//封装一个Future，用于操作这个HystrxiCommand
 
             @Override
             public boolean cancel(boolean mayInterruptIfRunning) {

@@ -104,7 +104,11 @@ public class HystrixRequestCache {
      */
     // suppressing warnings because we are using a raw Future since it's in a heterogeneous ConcurrentHashMap cache
     @SuppressWarnings({ "unchecked" })
+    /****
+     * 根据缓存key
+     */
     /* package */<T> HystrixCachedObservable<T> get(String cacheKey) {
+        //获得cacheKey对应的ValueCacheKey
         ValueCacheKey key = getRequestCacheKey(cacheKey);
         if (key != null) {
             ConcurrentHashMap<ValueCacheKey, HystrixCachedObservable<?>> cacheInstance = requestVariableForCache.get(concurrencyStrategy);
@@ -184,9 +188,12 @@ public class HystrixRequestCache {
         return null;
     }
 
+    /***
+     * 如果设置了cacheResult注解，则会维护一个ValueCacheKey
+     */
     private static class ValueCacheKey {
         private final RequestCacheKey rvKey;
-        private final String valueCacheKey;
+        private final String valueCacheKey;//缓存的key的名称
 
         private ValueCacheKey(RequestCacheKey rvKey, String valueCacheKey) {
             this.rvKey = rvKey;

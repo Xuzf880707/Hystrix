@@ -282,12 +282,15 @@ public interface HystrixCircuitBreaker {
 
         @Override
         public boolean attemptExecution() {
+            //全局配置里：判断熔断器开关是否强制打开
             if (properties.circuitBreakerForceOpen().get()) {
                 return false;
             }
+            //全局配置里：如果熔断器开关强制关闭
             if (properties.circuitBreakerForceClosed().get()) {
                 return true;
             }
+            //如果熔断器开关还没打开
             if (circuitOpened.get() == -1) {
                 return true;
             } else {

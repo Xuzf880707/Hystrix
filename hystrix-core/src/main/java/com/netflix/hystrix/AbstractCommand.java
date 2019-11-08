@@ -206,6 +206,11 @@ import java.util.concurrent.atomic.AtomicReference;
         this.executionSemaphoreOverride = executionSemaphore;//默认是null
     }
 
+    /***
+     * 初始化 HystrixCommandGroupKey
+     * @param fromConstructor
+     * @return
+     */
     private static HystrixCommandGroupKey initGroupKey(final HystrixCommandGroupKey fromConstructor) {
         if (fromConstructor == null) {
             throw new IllegalStateException("HystrixCommandGroup can not be NULL");
@@ -214,6 +219,12 @@ import java.util.concurrent.atomic.AtomicReference;
         }
     }
 
+    /***
+     * 初始化 HystrixCommandKey
+     * @param fromConstructor
+     * @param clazz
+     * @return
+     */
     private static HystrixCommandKey initCommandKey(final HystrixCommandKey fromConstructor, Class<?> clazz) {
         if (fromConstructor == null || fromConstructor.name().trim().equals("")) {
             final String keyName = getDefaultNameFromClass(clazz);
@@ -223,6 +234,13 @@ import java.util.concurrent.atomic.AtomicReference;
         }
     }
 
+    /***
+     * 初始化 CommandProperties
+     * @param commandKey
+     * @param propertiesStrategy
+     * @param commandPropertiesDefaults
+     * @return
+     */
     private static HystrixCommandProperties initCommandProperties(HystrixCommandKey commandKey, HystrixPropertiesStrategy propertiesStrategy, HystrixCommandProperties.Setter commandPropertiesDefaults) {
         if (propertiesStrategy == null) {
             return HystrixPropertiesFactory.getCommandProperties(commandKey, commandPropertiesDefaults);
@@ -344,6 +362,12 @@ import java.util.concurrent.atomic.AtomicReference;
         }
     }
 
+    /***
+     * 初始化 HystrixRequestLog
+     * @param enabled
+     * @param concurrencyStrategy
+     * @return
+     */
     private static HystrixRequestLog initRequestLog(boolean enabled, HystrixConcurrencyStrategy concurrencyStrategy) {
         if (enabled) {
             /* store reference to request log regardless of which thread later hits it */
@@ -608,6 +632,11 @@ import java.util.concurrent.atomic.AtomicReference;
         });
     }
 
+    /***
+     *
+     * @param _cmd 需要执行的AbstractCommand
+     * @return
+     */
     private Observable<R> applyHystrixSemantics(final AbstractCommand<R> _cmd) {
         // mark that we're starting execution on the ExecutionHook
         // if this hook throws an exception, then a fast-fail occurs with no fallback.  No state is left inconsistent

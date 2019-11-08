@@ -35,9 +35,10 @@ public class HystrixCommandFactory {
 
     public HystrixInvokable create(MetaHolder metaHolder) {
         HystrixInvokable executable;
+        //是否配置hystrixCollapser注解
         if (metaHolder.isCollapserAnnotationPresent()) {
             executable = new CommandCollapser(metaHolder);
-        } else if (metaHolder.isObservable()) {
+        } else if (metaHolder.isObservable()) {//是否是Objservable
             executable = new GenericObservableCommand(HystrixCommandBuilderFactory.getInstance().create(metaHolder));
         } else {
             executable = new GenericCommand(HystrixCommandBuilderFactory.getInstance().create(metaHolder));
