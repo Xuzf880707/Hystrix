@@ -264,6 +264,7 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
     }
 
 	private final AtomicReference<Thread> executionThread = new AtomicReference<Thread>();
+    //默认 不可在futureCancel后中断
 	private final AtomicBoolean interruptOnFutureCancel = new AtomicBoolean(false);
 
 	/**
@@ -348,12 +349,17 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
     }
 
     /**
+     * 异步执行的命令
      * Used for asynchronous execution of command.
      * <p>
      * This will queue up the command on the thread pool and return an {@link Future} to get the result once it completes.
+     * 这将使命令在线程池上排队，并返回一个Future，一旦命令异步执行完成，就可以从Future中获得响应结果
      * <p>
+     *     注意：如果没有配置为不在单独的线程中运行。这将与execute效果一样会出现阻塞
      * NOTE: If configured to not run in a separate thread, this will have the same effect as {@link #execute()} and will block.
      * <p>
+     *  我们并没有抛出异常，而是仅仅切换到同步来执行，
+     *  所以当我们把一个command从一个运行的独立线程切换到调用线程的时候，就不需要修改代码
      * We don't throw an exception but just flip to synchronous execution so code doesn't need to change in order to switch a command from running on a separate thread to the calling thread.
      * 
      * @return {@code Future<R>} Result of {@link #run()} execution or a fallback from {@link #getFallback()} if the command fails for any reason.
@@ -371,20 +377,26 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
      */
     public Future<R> queue() {
         /*
+         * 如果 Future.cancel(boolean)的方法参数mayInterrupt被设置为true的话，那么
+         * Observable.toBlocking().toFuture()返回的Future并不会实现执行线程的interruption方法。
+         * 因此，为了遵守Future的约定，我们必须将其包装起来。
+         *
          * The Future returned by Observable.toBlocking().toFuture() does not implement the
          * interruption of the execution thread when the "mayInterrupt" flag of Future.cancel(boolean) is set to true;
          * thus, to comply with the contract of Future, we must wrap around it.
          */
-        final Future<R> delegate = toObservable().toBlocking().toFuture();
-    	
+
+        final Future<R> delegate = toObservable()//初始化一个Observable
+                .toBlocking()//将Observable包装成一个阻塞的BlockingObservable
+                .toFuture();//将BlockingObservable包装成一个异步的Future，同时关联了一个Subscription
         final Future<R> f = new Future<R>() {
 
             @Override
             public boolean cancel(boolean mayInterruptIfRunning) {
-                if (delegate.isCancelled()) {
+                if (delegate.isCancelled()) {//判断HystixCommand是否已经取消了，如果是的，就没必要继续取消
                     return false;
                 }
-
+                //默认executionIsolationThreadInterruptOnFutureCancel 是false
                 if (HystrixCommand.this.getProperties().executionIsolationThreadInterruptOnFutureCancel().get()) {
                     /*
                      * The only valid transition here is false -> true. If there are two futures, say f1 and f2, created by this command
@@ -431,9 +443,9 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
         };
 
         /* special handling of error states that throw immediately */
-        if (f.isDone()) {
+        if (f.isDone()) {//如果future执行结束
             try {
-                f.get();
+                f.get();//获取结果
                 return f;
             } catch (Exception e) {
                 Throwable t = decomposeException(e);

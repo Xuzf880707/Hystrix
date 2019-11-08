@@ -191,18 +191,19 @@ import java.util.concurrent.atomic.AtomicReference;
 
         //Strategies from plugins
         this.eventNotifier = HystrixPlugins.getInstance().getEventNotifier();
+        //获取并发策略
         this.concurrencyStrategy = HystrixPlugins.getInstance().getConcurrencyStrategy();
         HystrixMetricsPublisherFactory.createOrRetrievePublisherForCommand(this.commandKey, this.commandGroup, this.metrics, this.circuitBreaker, this.properties);
         this.executionHook = initExecutionHook(executionHook);
-
+        //创建并绑定一个HystrixRequestCache,这个HystrixRequestCache有本地缓存
         this.requestCache = HystrixRequestCache.getInstance(this.commandKey, this.concurrencyStrategy);
         this.currentRequestLog = initRequestLog(this.properties.requestLogEnabled().get(), this.concurrencyStrategy);
 
         /* fallback semaphore override if applicable */
-        this.fallbackSemaphoreOverride = fallbackSemaphore;
+        this.fallbackSemaphoreOverride = fallbackSemaphore;//默认是null
 
         /* execution semaphore override if applicable */
-        this.executionSemaphoreOverride = executionSemaphore;
+        this.executionSemaphoreOverride = executionSemaphore;//默认是null
     }
 
     private static HystrixCommandGroupKey initGroupKey(final HystrixCommandGroupKey fromConstructor) {
@@ -526,12 +527,14 @@ import java.util.concurrent.atomic.AtomicReference;
                 }
             }
         };
-
+        /***
+         * 开始执行HystrixCommand
+         */
         return Observable.defer(new Func0<Observable<R>>() {
             @Override
-            public Observable<R> call() {
+            public Observable<R> call() {//开始执行HystrixCommand的主方法了
                  /* this is a stateful object so can only be used once */
-                //修改命令为已创建状态
+                //把状态从未启动状态修改为已创建状态，从这里我们可以看到，一个HystrixCommand只能执行一次
                 if (!commandState.compareAndSet(CommandState.NOT_STARTED, CommandState.OBSERVABLE_CHAIN_CREATED)) {
                     IllegalStateException ex = new IllegalStateException("This instance can only be executed once. Please instantiate a new instance.");
                     //TODO make a new error type for this
@@ -547,13 +550,19 @@ import java.util.concurrent.atomic.AtomicReference;
                     }
                 }
                 //是否开启缓存
+                //需要缓存的配置打开，且定义了getCacheKey方法，且返回非null
                 final boolean requestCacheEnabled = isRequestCachingEnabled();
-                //获得缓存key
+                //调用getCacheKey方法获得缓存key
                 final String cacheKey = getCacheKey();
 
                 /* try from cache first */
                 //如果开启了缓存开关，则先从缓存中获取
-                if (requestCacheEnabled) {
+                if (requestCacheEnabled) {//如果开启了缓存
+                    //根据cacheKey从requestCache获得缓存结果
+                    //这个requestCache只根据几个条件有关：
+                    //  type：这个是固定的，如果是配置的HystrixCommand的缓存key，则这个值就是1，如果配置的是HystrixCollapser的缓存key，则是2
+                    //  commandKey
+                    //  HystrixConcurrencyStrategy：跟并发策略有关
                     HystrixCommandResponseFromCache<R> fromCache = (HystrixCommandResponseFromCache<R>) requestCache.get(cacheKey);
                     if (fromCache != null) {
                         isResponseFromCache = true;
@@ -561,6 +570,7 @@ import java.util.concurrent.atomic.AtomicReference;
                     }
                 }
                 // 获得 执行命令Observable
+                //applyHystrixSemantics 申请Hystrix的语义
                 Observable<R> hystrixObservable =
                         Observable.defer(applyHystrixSemantics)
                                 .map(wrapWithAllOnNextHooks);
@@ -568,12 +578,16 @@ import java.util.concurrent.atomic.AtomicReference;
                 Observable<R> afterCache;
 
                 // put in cache 如果开启缓存的话，则将结果放到缓存中
+                //如果开启缓存，且cacheKey不为空，则更新缓存或直接从缓存里获取
                 if (requestCacheEnabled && cacheKey != null) {
                     // wrap it for caching
+                    //将AbstractCommand 包起来用于缓存
                     HystrixCachedObservable<R> toCache = HystrixCachedObservable.from(hystrixObservable, _cmd);
+                    //根据cacheKey把toCache缓存到本地内存里
                     HystrixCommandResponseFromCache<R> fromCache = (HystrixCommandResponseFromCache<R>) requestCache.putIfAbsent(cacheKey, toCache);
-                    if (fromCache != null) {// 添加失败，表示存在并发问题
+                    if (fromCache != null) {// 添加失败，表示添加缓存的额过程存在并发问题
                         // another thread beat us so we'll use the cached value instead
+                        //表示有另一个线程在做同样操作，所以我们直接从缓存里拿
                         toCache.unsubscribe();
                         isResponseFromCache = true;// 标记 并重新从缓存中获取结果
                         return handleRequestCacheHitAndEmitValues(fromCache, _cmd);
@@ -581,14 +595,14 @@ import java.util.concurrent.atomic.AtomicReference;
                         // we just created an ObservableCommand so we cast and return it
                         afterCache = toCache.toObservable();
                     }
-                } else {
+                } else {//如果没开启缓存的额话
                     afterCache = hystrixObservable;
                 }
 
                 return afterCache
                         //无论是正常的终止，或者取消订阅，都会执行一次清理
-                        .doOnTerminate(terminateCommandCleanup)     // perform cleanup once (either on normal terminal state (this line), or unsubscribe (next line))
-                        .doOnUnsubscribe(unsubscribeCommandCleanup) // perform cleanup once
+                        .doOnTerminate(terminateCommandCleanup)  //把HystrixCommand状态从Created状态变为停止状态，并执行一次清理
+                        .doOnUnsubscribe(unsubscribeCommandCleanup) // 取消订阅HystrixCommand
                         .doOnCompleted(fireOnCompletedHook);
             }
         });
@@ -1812,7 +1826,12 @@ import java.util.concurrent.atomic.AtomicReference;
         return getCacheKey();
     }
 
+    /***
+     * 判断是否需要缓存
+     * @return
+     */
     protected boolean isRequestCachingEnabled() {
+        //需要缓存的配置打开，且定义了getCacheKey方法，且返回非null
         return properties.requestCacheEnabled().get() && getCacheKey() != null;
     }
 

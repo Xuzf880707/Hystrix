@@ -74,32 +74,43 @@ public class HystrixCommandAspect {
                 .build();
     }
 
+    /***
+     * 拦截HystrixCommand注解
+     */
     @Pointcut("@annotation(com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand)")
 
     public void hystrixCommandAnnotationPointcut() {
     }
-
+    /***
+     * 拦截HystrixCollapser注解
+     */
     @Pointcut("@annotation(com.netflix.hystrix.contrib.javanica.annotation.HystrixCollapser)")
     public void hystrixCollapserAnnotationPointcut() {
     }
 
     @Around("hystrixCommandAnnotationPointcut() || hystrixCollapserAnnotationPointcut()")
     public Object methodsAnnotatedWithHystrixCommand(final ProceedingJoinPoint joinPoint) throws Throwable {
+        //获得添加注解的方法
         Method method = getMethodFromTarget(joinPoint);
         Validate.notNull(method, "failed to get method from joinPoint: %s", joinPoint);
+        //判断是否是HystrixCommand或者HystrixCollapser注解
         if (method.isAnnotationPresent(HystrixCommand.class) && method.isAnnotationPresent(HystrixCollapser.class)) {
             throw new IllegalStateException("method cannot be annotated with HystrixCommand and HystrixCollapser " +
                     "annotations at the same time");
         }
+        //根据方法，检查本地内存里
         MetaHolderFactory metaHolderFactory = META_HOLDER_FACTORY_MAP.get(HystrixPointcutType.of(method));
         MetaHolder metaHolder = metaHolderFactory.create(joinPoint);
+        //创建一个HystrixCommand实例
         HystrixInvokable invokable = HystrixCommandFactory.getInstance().create(metaHolder);
+        //如果配置了Collapser，则获得Collapser的ExecutionType,不然就获得HystrixCommand的executionType
         ExecutionType executionType = metaHolder.isCollapserAnnotationPresent() ?
                 metaHolder.getCollapserExecutionType() : metaHolder.getExecutionType();
 
         Object result;
         try {
-            if (!metaHolder.isObservable()) {
+            if (!metaHolder.isObservable()) {//如果不是Observable的HystrixCommand
+                //开始执行HytrixCommand
                 result = CommandExecutor.execute(invokable, executionType, metaHolder);
             } else {
                 result = executeObservable(invokable, executionType, metaHolder);

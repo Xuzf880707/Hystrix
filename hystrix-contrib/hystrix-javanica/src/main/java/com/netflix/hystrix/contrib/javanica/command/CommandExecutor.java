@@ -47,11 +47,12 @@ public class CommandExecutor {
         Validate.notNull(invokable);
         Validate.notNull(metaHolder);
 
-        switch (executionType) {
-            case SYNCHRONOUS: {
+        switch (executionType) {//检查executionType
+            case SYNCHRONOUS: {//如果是同步调用
+                //从这边可以看出，同步调用，调用了execute方法，调用HystrixCommand.execute
                 return castToExecutable(invokable, executionType).execute();
             }
-            case ASYNCHRONOUS: {
+            case ASYNCHRONOUS: {//如果是异步调用
                 HystrixExecutable executable = castToExecutable(invokable, executionType);
                 if (metaHolder.hasFallbackMethodCommand()
                         && ExecutionType.ASYNCHRONOUS == metaHolder.getFallbackExecutionType()) {
