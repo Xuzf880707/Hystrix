@@ -19,6 +19,7 @@ package com.netflix.hystrix.contrib.javanica.command;
  * Wrapper for command actions combines different actions together.
  *
  * @author dmgcodevil
+ * CommandActions会将commandmethod和fallbackMethod一一绑定
  */
 public class CommandActions {
 

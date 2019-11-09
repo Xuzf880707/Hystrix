@@ -103,8 +103,9 @@ import java.util.concurrent.atomic.AtomicReference;
     /* END EXECUTION Semaphore */
 
     protected final AtomicReference<Reference<TimerListener>> timeoutTimer = new AtomicReference<Reference<TimerListener>>();
-
+    //初始化AbstractCommand的状态是NOT_STARTED
     protected AtomicReference<CommandState> commandState = new AtomicReference<CommandState>(CommandState.NOT_STARTED);
+    //初始化线程的状态是NOT_USING_THREAD
     protected AtomicReference<ThreadState> threadState = new AtomicReference<ThreadState>(ThreadState.NOT_USING_THREAD);
 
     /*

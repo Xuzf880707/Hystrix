@@ -44,14 +44,17 @@ public class CacheInvocationContextFactory {
      * metaHolder：HystrixCommand注解的方法对象
      */
     public static CacheInvocationContext<CacheResult> createCacheResultInvocationContext(MetaHolder metaHolder) {
-        //获得command注解的方法
+        //获得commandMethod的方法
         Method method = metaHolder.getMethod();
-        //判断是否加了CacheResult注解
+        //判断方法是否存在CacheResult注解
         if (method.isAnnotationPresent(CacheResult.class)) {
-            //获得CacheResult注解
+            //获得CacheResult注解对象
             CacheResult cacheResult = method.getAnnotation(CacheResult.class);
-            //根据CacheResult注解中的cacheKeyMethod属性，和HystrixCommand注解的方法，根据缓存key创建一个缓存key对应的MethodExecutionAction对象
+            //根据CacheResult注解中的cacheKeyMethod属性，找到对应的方法，然后创建一个用于获取对应的cacheKey的MethodExecutionAction
+            //后面可以直接根据这个MethodExecutionAction获得对应缓存key
             MethodExecutionAction cacheKeyMethod = createCacheKeyAction(cacheResult.cacheKeyMethod(), metaHolder);
+            //将MethodExecutionAction和commandMethod用CacheInvocationContext保存起来，
+            // 后面就可以根据commandMethod找到对应的CacheInvocationContext，然后获取MethodExecutionAction，进而获得cachekey
             return new CacheInvocationContext<CacheResult>(cacheResult, cacheKeyMethod, metaHolder.getObj(), method, metaHolder.getArgs());
         }
         //如果没有加CacheResult，则返回空
@@ -87,13 +90,16 @@ public class CacheInvocationContextFactory {
      */
     private static MethodExecutionAction createCacheKeyAction(String method, MetaHolder metaHolder) {
         MethodExecutionAction cacheKeyAction = null;
-        if (StringUtils.isNotBlank(method)) {//判断是否配置cacheKeyMethod属性
+        //如果指定了cacheKeyMethod属性来返回缓存key的话，这这个方法必须返回字符串
+        if (StringUtils.isNotBlank(method)) {
             /***
-             * metaHolder.getObj().getClass()：Command方法所属类型对象
+             * metaHolder.getObj().getClass()：CommandMethod所属的类对象
              * method：CacheResult注解中的cacheKeyMethod属性值
-             * metaHolder.getMethod().getParameterTypes()：添加了Command注解的方法的参数类型
+             * metaHolder.getMethod().getParameterTypes()：CommandMethod方法的参数类型数组
              *
-             * 查找和HystrixCommand参数一样的cacheKeyMethod是否存在
+             * 在CommandMethod所属的类对象中查找对应的方法对象cacheKeyMethod是否已存在，如果不存在，则抛出异常
+             *
+             * 注意：cacheKeyMethod其实是用来指定
              */
             Method cacheKeyMethod = getDeclaredMethod(metaHolder.getObj().getClass(), method,
                     metaHolder.getMethod().getParameterTypes());
@@ -101,13 +107,18 @@ public class CacheInvocationContextFactory {
                 throw new HystrixCachingException("method with name '" + method + "' doesn't exist in class '"
                         + metaHolder.getObj().getClass() + "'");
             }
-            //cacheKeyMethod返回的类型必须是string
+            //如果指定了cacheKeyMethod属性来返回缓存key的话，这这个方法必须返回字符串
             if (!cacheKeyMethod.getReturnType().equals(String.class)) {
                 throw new HystrixCachingException("return type of cacheKey method must be String. Method: '" + method + "', Class: '"
                         + metaHolder.getObj().getClass() + "'");
             }
-            //根据cacheKeyMethod创建一个对应的cacheKeyAction
-            MetaHolder cMetaHolder = MetaHolder.builder().obj(metaHolder.getObj()).method(cacheKeyMethod).args(metaHolder.getArgs()).build();
+            //根据cacheKeyMethod创建一个对应的用于获得缓存key值的MetaHolder,通过MetaHolder可以获得相应的缓存key
+            MetaHolder cMetaHolder = MetaHolder.builder()
+                    .obj(metaHolder.getObj())//cacheKeyMethod所属的类对象
+                    .method(cacheKeyMethod) //cacheKeyMethod方法
+                    .args(metaHolder.getArgs())//cacheKeyMethod需要的参数
+                    .build();
+            //根据MetaHolder绑定一个获得cacheKey的
             cacheKeyAction = new MethodExecutionAction(cMetaHolder.getObj(), cacheKeyMethod, cMetaHolder.getArgs(), cMetaHolder);
         }
         return cacheKeyAction;

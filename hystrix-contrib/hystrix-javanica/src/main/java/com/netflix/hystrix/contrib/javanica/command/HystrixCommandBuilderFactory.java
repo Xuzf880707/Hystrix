@@ -64,12 +64,15 @@ public class HystrixCommandBuilderFactory {
      * @return
      */
     public <ResponseType> HystrixCommandBuilder create(MetaHolder metaHolder, Collection<HystrixCollapser.CollapsedRequest<ResponseType, Object>> collapsedRequests) {
+        //校验HystrixCommand的元信息
+        //主要校验metaHolder不为空，且metaHolder对应的方法使用的HystrixCommand注解
         validateMetaHolder(metaHolder);
 
-        return HystrixCommandBuilder.builder()
+        return HystrixCommandBuilder.builder()//初始化一个HystrixCommandBuilder
                 .setterBuilder(createGenericSetterBuilder(metaHolder))//创建一个构建器GenericSetterBuilder，并初始化注解的配置
-                .commandActions(createCommandActions(metaHolder))//调用createCommandActions创建CommandActions
-                .collapsedRequests(collapsedRequests)//创建合并的请求
+                //调用HystrixCommand和FallBack创建两个对应的Actions，分别是commandAction和fallbackAction，并用一个CommandActions将它们一一绑定
+                .commandActions(createCommandActions(metaHolder))
+                .collapsedRequests(collapsedRequests)//根据collapsedPropeties创建合并的请求对象
                 .cacheResultInvocationContext(createCacheResultInvocationContext(metaHolder))//创建绑定添加缓存结果的上下文的对象
                 .cacheRemoveInvocationContext(createCacheRemoveInvocationContext(metaHolder))//创建绑定移除缓存结果的上下文的对象
                 .ignoreExceptions(metaHolder.getCommandIgnoreExceptions())//初始化护忽视的异常列表
@@ -86,16 +89,17 @@ public class HystrixCommandBuilderFactory {
      * 构建一个 GenericSetterBuilder 用于包装创建CommandActions,并调用方法执行
      * @param metaHolder
      * @return
+     * 根据元信息metaHolder初始化创建一个GenericSetterBuilder
      */
     private GenericSetterBuilder createGenericSetterBuilder(MetaHolder metaHolder) {
         GenericSetterBuilder.Builder setterBuilder = GenericSetterBuilder.builder()
-                .groupKey(metaHolder.getCommandGroupKey())//设置groupKey
-                .threadPoolKey(metaHolder.getThreadPoolKey())//设置ThreadPoolKey
-                .commandKey(metaHolder.getCommandKey())//设置CommandKey
-                .collapserKey(metaHolder.getCollapserKey())//设置CollapserKey
-                .commandProperties(metaHolder.getCommandProperties())
-                .threadPoolProperties(metaHolder.getThreadPoolProperties())//设置线程池属性
-                .collapserProperties(metaHolder.getCollapserProperties());
+                .groupKey(metaHolder.getCommandGroupKey())//设置groupKey，没有设置groupKey，则默认采用类名
+                .threadPoolKey(metaHolder.getThreadPoolKey())//设置ThreadPoolKey，没有设置ThreadPoolKey，则默认是null
+                .commandKey(metaHolder.getCommandKey())//设置CommandKey，没有设置CommandKey，则默认是方法名
+                .collapserKey(metaHolder.getCollapserKey())//设置CollapserKey，没有配置CollapserKey的化，默认是null
+                .commandProperties(metaHolder.getCommandProperties())//读取CommandProperties注解，并初始化 GenericSetterBuilder
+                .threadPoolProperties(metaHolder.getThreadPoolProperties())//读取ThreadPoolProperties注解，并初始化GenericSetterBuilder
+                .collapserProperties(metaHolder.getCollapserProperties());//读取CollapserProperties注解，并初始化GenericSetterBuilder
         //如果配置了HystrixCollapser注解的话，则scope默认是REQUEST，并根据配置具体配置设值。
         //如果没有配置HystrixCollapser注解的话，则scope默认是null
         if (metaHolder.isCollapserAnnotationPresent()) {
@@ -105,6 +109,11 @@ public class HystrixCommandBuilderFactory {
         return setterBuilder.build();
     }
 
+    /***
+     * 创建一个CommandActions，该CommandActions会将fallback方法和CommandMethod绑定到一个CommandActions对象中
+     * @param metaHolder
+     * @return
+     */
     private CommandActions createCommandActions(MetaHolder metaHolder) {
         //根据metaHolder创建一个CommandAction，这个metaHolder包含我们所有的注解配置
         CommandAction commandAction = createCommandAction(metaHolder);
@@ -130,19 +139,29 @@ public class HystrixCommandBuilderFactory {
         return new MethodExecutionAction(metaHolder.getObj(), metaHolder.getMethod(), metaHolder.getArgs(), metaHolder);
     }
 
+    /***
+     *
+     * @param metaHolder
+     * @return
+     * 根据FallbackMethod创建一个CommandAction类型的FallbackAction
+     */
     private CommandAction createFallbackAction(MetaHolder metaHolder) {
-        //在HystrixCommand中查找相应的fallback方法，没有定义的话，返回默认的
+        //根据HystrixCommand在类中查找相应的fallback方法，没有定义的话，返回默认的
+        //metaHolder.getObj().getClass()：HystrixCommand所对应的类
+        //metaHolder.getMethod()：HystrixCommand所对应的方法
+        //metaHolder.isExtendedFallback())：默认是false
         FallbackMethod fallbackMethod = MethodProvider.getInstance().getFallbackMethod(metaHolder.getObj().getClass(),
                 metaHolder.getMethod(), metaHolder.isExtendedFallback());
         //校验fallback方法参数和真正的调用方法的参数的返回类型
-        ////检查fallback方法和command注解的方法的返回值是否匹配
+        ////检查fallback方法和commandMethod的返回值是否匹配
         fallbackMethod.validateReturnType(metaHolder.getMethod());
         CommandAction fallbackAction = null;
-        if (fallbackMethod.isPresent()) {
-            //获得fallback方法对象
+        if (fallbackMethod.isPesent()) {//判断fallbackMethod是否存在
+            //获得fallbackMethod对象对应的fallback方法
             Method fMethod = fallbackMethod.getMethod();
-            //判断这个fallbackMethod是否是默认的降级方法，如果是是的，就是无参数组，不然返回实际的参数数组
+            //获得fallback的方法参数，如果是默认的化，返回一个数组长度为0的数组，不然就获得传给CommandMethod方法的参数。这里获得是参数值
             Object[] args = fallbackMethod.isDefault() ? new Object[0] : metaHolder.getArgs();
+            //从下面这行，我们可以知道fallbackMethod本身自己又可以迭代的设置fallbackMethod
             if (fallbackMethod.isCommand()) {//判断这个fallback自己本身是否是一个HystrixCommand方法
                 fMethod.setAccessible(true);
                 HystrixCommand hystrixCommand = fMethod.getAnnotation(HystrixCommand.class);
@@ -170,17 +189,19 @@ public class HystrixCommandBuilderFactory {
             } else {
                 //创建一个MetaHolder
                 MetaHolder fmMetaHolder = MetaHolder.builder()
-                        .obj(metaHolder.getObj())//实际被降级的方法对象
-                        .defaultFallback(fallbackMethod.isDefault())//是否是默认降级方法
+                        .obj(metaHolder.getObj())//HystrixCommand注解所属的类对象（这里绑定的不是代理对象）
+                        .defaultFallback(fallbackMethod.isDefault())//是否是默认降级方法，默认是false
                         .method(fMethod)//降级方法
-                        .fallbackExecutionType(ExecutionType.SYNCHRONOUS)//降级方法的执行类型，默认是同步的
-                        .extendedFallback(fallbackMethod.isExtended())//默认是true
+                        .fallbackExecutionType(ExecutionType.SYNCHRONOUS)//降级方法本身的执行类型，默认是同步的
+                        //如果说，降级的方法相对于CommandMethod多出Throwable参数，则这边是true，不然是false
+                        //所以这里可以理解是标识降级方法里是否捕获了异常信息
+                        .extendedFallback(fallbackMethod.isExtended())
                         .extendedParentFallback(metaHolder.isExtendedFallback())//默认是false
                         .ajcMethod(null) // if fallback method isn't annotated with command annotation then we don't need to get ajc method for this
-                        .args(args)//方法参数
+                        .args(args)//绑定请求到CommandMethod的方法参数数组
                         .build();//根据GenericSetterBuilder初始化其他对应的参数
 
-                //返回一个MethodExecutionAction，和上面的
+                //返回一个CommandAction，代表fallbackMethod的
                 fallbackAction = new MethodExecutionAction(fmMetaHolder.getObj(), fMethod, fmMetaHolder.getArgs(), fmMetaHolder);
             }
 
