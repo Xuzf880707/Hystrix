@@ -297,12 +297,19 @@ public class HystrixPlugins {
      * 
      * @since 1.2
      */
+    /***
+     * 获取HystrixCommandExecutionHook
+     * @return
+     * 检查commandExecutionHook是否存在，如果为空的话，则初始化一个HystrixCommandExecutionHookDefault，并返回
+     */
     public HystrixCommandExecutionHook getCommandExecutionHook() {
-        if (commandExecutionHook.get() == null) {
+        if (commandExecutionHook.get() == null) {//如果HystrixCommandExecutionHook是空的
             // check for an implementation from Archaius first
+            //首先检查是否存在HystrixCommandExecutionHook的子类
             Object impl = getPluginImplementation(HystrixCommandExecutionHook.class);
-            if (impl == null) {
+            if (impl == null) {//默认为空
                 // nothing set via Archaius so initialize with default
+                //设置commandExecutionHook为默认的HystrixCommandExecutionHookDefault
                 commandExecutionHook.compareAndSet(null, HystrixCommandExecutionHookDefault.getInstance());
                 // we don't return from here but call get() again in case of thread-race so the winner will always get returned
             } else {

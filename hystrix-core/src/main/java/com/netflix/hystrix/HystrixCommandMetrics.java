@@ -114,13 +114,24 @@ public class HystrixCommandMetrics extends HystrixMetrics {
      *            Pass-thru to {@link HystrixCommandMetrics} instance on first time when constructed
      * @return {@link HystrixCommandMetrics}
      */
+    /***
+     *
+     * @param key 本地内存中回根据这个commandKey缓存HystrixCommandMetrics对象
+     * @param commandGroup
+     * @param threadPoolKey
+     * @param properties
+     * @return
+     *  1、从本地内存里根据commandKedy来获取HystrixCommandMetrics
+     *  2、如果本地没有的话，则回创建一个 HystrixCommandMetrics
+     *      创建的HystrixCommandMetrics里，默认的nonNullThreadPoolKey是group名称
+     */
     public static HystrixCommandMetrics getInstance(HystrixCommandKey key, HystrixCommandGroupKey commandGroup, HystrixThreadPoolKey threadPoolKey, HystrixCommandProperties properties) {
         // attempt to retrieve from cache first
-        //检查commandkey对应的HystrixCommandMetrics是否已存在
+        //从本地检查commandkey对应的HystrixCommandMetrics是否已存在
         HystrixCommandMetrics commandMetrics = metrics.get(key.name());
         if (commandMetrics != null) {//存在则直接返回这个
             return commandMetrics;
-        } else {
+        } else {//如果本地内存里没有，则新建一个HystrixCommandMetrics
             synchronized (HystrixCommandMetrics.class) {
                 HystrixCommandMetrics existingMetrics = metrics.get(key.name());
                 if (existingMetrics != null) {
@@ -185,19 +196,31 @@ public class HystrixCommandMetrics extends HystrixMetrics {
     private final RollingCommandUserLatencyDistributionStream rollingCommandUserLatencyDistributionStream;
     private final RollingCommandMaxConcurrencyStream rollingCommandMaxConcurrencyStream;
 
+    /***
+     *统计流类实现类
+     * @param key commandkey
+     * @param commandGroup groupkey
+     * @param threadPoolKey 默认是groupkey，如果配置了threadPoolKey，那就使用配置的threadPoolKey
+     * @param properties
+     * @param eventNotifier
+     */
     /* package */HystrixCommandMetrics(final HystrixCommandKey key, HystrixCommandGroupKey commandGroup, HystrixThreadPoolKey threadPoolKey, HystrixCommandProperties properties, HystrixEventNotifier eventNotifier) {
         super(null);
         this.key = key;
         this.group = commandGroup;
         this.threadPoolKey = threadPoolKey;
         this.properties = properties;
-
+        //HealthCountsStream消息流监听了HystrixCommandCompletionStream消息流，并且通过RX java对窗口期内的请求成功，失败，超时，进行统计得出失败次数，总次数，失败比率
         healthCountsStream = HealthCountsStream.getInstance(key, properties);
+        //RollingCommandEventCounterStream消息流监听了HystrixCommandCompletionStream消息流，并且通过RX java 对各个消息类型进行一段时间内数据的统计
         rollingCommandEventCounterStream = RollingCommandEventCounterStream.getInstance(key, properties);
+        //用于根据key做累计的stream
         cumulativeCommandEventCounterStream = CumulativeCommandEventCounterStream.getInstance(key, properties);
-
+        //子类RollingCommandLatencyDistributionStream监听了HystrixCommandCompletionStream消息流，并且通过RX java监听窗口期内的executelatency，通过Histogram计算窗口期内延时的分布。
         rollingCommandLatencyDistributionStream = RollingCommandLatencyDistributionStream.getInstance(key, properties);
+        //RollingCommandUserLatencyDistributionStream消息流监听了HystrixCommandCompletionStream消息流。并且通过RX java对窗口期内的请求的totalLatency的分布进行计算。
         rollingCommandUserLatencyDistributionStream = RollingCommandUserLatencyDistributionStream.getInstance(key, properties);
+        //子类RollingCommandMaxConcurrencyStream监听了HystrixCommandStartStream，然后通过RX java对窗口期内的执行并发量取最大值。
         rollingCommandMaxConcurrencyStream = RollingCommandMaxConcurrencyStream.getInstance(key, properties);
     }
 

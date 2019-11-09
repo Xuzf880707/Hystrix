@@ -99,19 +99,28 @@ public interface HystrixThreadPool {
          *
          * @return {@link HystrixThreadPool} instance
          */
+        /**
+         * 根据threadPookey获得线程池
+         * @param threadPoolKey
+         * @param propertiesBuilder
+         * @return
+         * 1、根据 threadPoolKey 检查本地内存是否存在
+         */
         /* package */static HystrixThreadPool getInstance(HystrixThreadPoolKey threadPoolKey, HystrixThreadPoolProperties.Setter propertiesBuilder) {
             // get the key to use instead of using the object itself so that if people forget to implement equals/hashcode things will still work
-            String key = threadPoolKey.name();
+            String key = threadPoolKey.name();//获得 threadPoolKey
 
             // this should find it for all but the first time
+            //查找本地内存，是否已存在
             HystrixThreadPool previouslyCached = threadPools.get(key);
-            if (previouslyCached != null) {
+            if (previouslyCached != null) {//有则直接返回
                 return previouslyCached;
             }
 
             // if we get here this is the first time so we need to initialize
             synchronized (HystrixThreadPool.class) {
                 if (!threadPools.containsKey(key)) {
+                    //新建一个默认的线程池，并存放到内存里
                     threadPools.put(key, new HystrixThreadPoolDefault(threadPoolKey, propertiesBuilder));
                 }
             }
@@ -168,18 +177,29 @@ public interface HystrixThreadPool {
         private final HystrixThreadPoolMetrics metrics;
         private final int queueSize;
 
+        /***
+         *
+         * @param threadPoolKey 线程池key，默认是group名称
+         * @param propertiesDefaults 线程池的默认配置
+         */
         public HystrixThreadPoolDefault(HystrixThreadPoolKey threadPoolKey, HystrixThreadPoolProperties.Setter propertiesDefaults) {
+            //获得线程池的默认的注解配置：ThreadPoolProperties
             this.properties = HystrixPropertiesFactory.getThreadPoolProperties(threadPoolKey, propertiesDefaults);
+            //获得线程池的并发策略，默认是HystrixConcurrencyStrategyDefault
             HystrixConcurrencyStrategy concurrencyStrategy = HystrixPlugins.getInstance().getConcurrencyStrategy();
+            //获得线程池的队列最大的阻塞数量，默认是-1，也就是不限制大小
             this.queueSize = properties.maxQueueSize().get();
-
+            //根据线程池key、线程池创建一个线程池的统计信息类： HystrixThreadPoolMetrics
             this.metrics = HystrixThreadPoolMetrics.getInstance(threadPoolKey,
                     concurrencyStrategy.getThreadPool(threadPoolKey, properties),
                     properties);
+            //返回线程池
             this.threadPool = this.metrics.getThreadPool();
+            //获得线程池中的队列
             this.queue = this.threadPool.getQueue();
 
             /* strategy: HystrixMetricsPublisherThreadPool */
+            //创建一个 HystrixMetricsPublisherThreadPool
             HystrixMetricsPublisherFactory.createOrRetrievePublisherForThreadPool(threadPoolKey, this.metrics, this.properties);
         }
 

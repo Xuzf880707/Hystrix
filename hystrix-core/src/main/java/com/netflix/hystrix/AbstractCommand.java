@@ -177,13 +177,13 @@ import java.util.concurrent.atomic.AtomicReference;
             HystrixCommandMetrics metrics, TryableSemaphore fallbackSemaphore, TryableSemaphore executionSemaphore,
             HystrixPropertiesStrategy propertiesStrategy, HystrixCommandExecutionHook executionHook) {
 
-        this.commandGroup = initGroupKey(group);//初始化group
+        this.commandGroup = initGroupKey(group);//初始化groupKey
         this.commandKey = initCommandKey(key, getClass());//初始化commandKey
         //初始化HystrixCommandProperties，这个对象会根据CommandKey进行缓存到本地内存
         this.properties = initCommandProperties(this.commandKey, propertiesStrategy, commandPropertiesDefaults);
         //创建并绑定一个ThreadPoolKey
         this.threadPoolKey = initThreadPoolKey(threadPoolKey, this.commandGroup, this.properties.executionIsolationThreadPoolKeyOverride().get());
-        //创建并绑定HystrixCommandMetrics
+        //创建并绑定HystrixCommandMetrics，这是一个统计流类实现类
         this.metrics = initMetrics(metrics, this.commandGroup, this.threadPoolKey, this.commandKey, this.properties);
         //创建一个熔断器
         this.circuitBreaker = initCircuitBreaker(this.properties.circuitBreakerEnabled().get(), circuitBreaker, this.commandGroup, this.commandKey, this.properties, this.metrics);
@@ -192,18 +192,23 @@ import java.util.concurrent.atomic.AtomicReference;
 
         //Strategies from plugins
         this.eventNotifier = HystrixPlugins.getInstance().getEventNotifier();
-        //获取并发策略
+        //获取默认的并发策略，默认是 HystrixConcurrencyStrategyDefault
         this.concurrencyStrategy = HystrixPlugins.getInstance().getConcurrencyStrategy();
+        //创建一个默认的HystrixMetricsPublisherCommandDefault 用于订阅指标统计信息
         HystrixMetricsPublisherFactory.createOrRetrievePublisherForCommand(this.commandKey, this.commandGroup, this.metrics, this.circuitBreaker, this.properties);
+        //默认返回一个HystrixCommandExecutionHookDefault，并赋值给executionHook
         this.executionHook = initExecutionHook(executionHook);
         //创建并绑定一个HystrixRequestCache,这个HystrixRequestCache有本地缓存
         this.requestCache = HystrixRequestCache.getInstance(this.commandKey, this.concurrencyStrategy);
+        //根据是否开启日志，创建一个 HystrixRequestLog
         this.currentRequestLog = initRequestLog(this.properties.requestLogEnabled().get(), this.concurrencyStrategy);
 
         /* fallback semaphore override if applicable */
+        //用于控制执行fallback方法的线程池的信号量
         this.fallbackSemaphoreOverride = fallbackSemaphore;//默认是null
 
         /* execution semaphore override if applicable */
+        //用于控制执行HystrixCommand方法的线程池的信号量
         this.executionSemaphoreOverride = executionSemaphore;//默认是null
     }
 
@@ -284,18 +289,23 @@ import java.util.concurrent.atomic.AtomicReference;
     }
 
     /***
-     *
+     *统计流类实现类
      * @param fromConstructor
      * @param groupKey groupkey名称
      * @param threadPoolKey 线程池key
      * @param commandKey commandKey
      * @param properties propertis
      * @return
+     * 我们可以看到指标统计信息相关的属性主要是：
+     *      commandKey
+     *      groupKey
+     *      threadPookKey
      */
     private static HystrixCommandMetrics initMetrics(HystrixCommandMetrics fromConstructor, HystrixCommandGroupKey groupKey,
                                                      HystrixThreadPoolKey threadPoolKey, HystrixCommandKey commandKey,
                                                      HystrixCommandProperties properties) {
         if (fromConstructor == null) {
+            //返回一个统计流类实现类
             return HystrixCommandMetrics.getInstance(commandKey, groupKey, threadPoolKey, properties);
         } else {
             return fromConstructor;

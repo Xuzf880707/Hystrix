@@ -70,7 +70,8 @@ public class CacheInvocationContextFactory {
      * metaHolder：HystrixCommand注解的方法对象
      */
     public static CacheInvocationContext<CacheRemove> createCacheRemoveInvocationContext(MetaHolder metaHolder) {
-        Method method = metaHolder.getMethod(); //获得command注解的方法
+        //获得commandMethod的方法
+        Method method = metaHolder.getMethod();
         //判断是否加了CacheRemove注解
         if (method.isAnnotationPresent(CacheRemove.class)) {
             //获得CacheRemove注解
@@ -84,7 +85,7 @@ public class CacheInvocationContextFactory {
 
     /***
      *
-     * @param method CacheResult注解中的cacheKeyMethod属性值
+     * @param method CacheResult/CachRemove注解中的cacheKeyMethod属性值
      * @param metaHolder 添加HystrixCommand注解的方法对象
      * @return
      */

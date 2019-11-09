@@ -68,7 +68,7 @@ public class HystrixRequestCache {
     }
 
     /****
-     *
+     *根据commandKey和 HystrixConcurrencyStrategyDefault初始化创建一个HystrixRequestCache
      * @param key commandKey
      * @param concurrencyStrategy 并发策略
      * @return
@@ -77,14 +77,27 @@ public class HystrixRequestCache {
         return getInstance(new RequestCacheKey(key, concurrencyStrategy), concurrencyStrategy);
     }
 
+    /***
+     *
+     * @param key HystrixCollapserKey
+     * @param concurrencyStrategy 默认是 HystrixConcurrencyStrategyDefault
+     * @return
+     */
     public static HystrixRequestCache getInstance(HystrixCollapserKey key, HystrixConcurrencyStrategy concurrencyStrategy) {
         return getInstance(new RequestCacheKey(key, concurrencyStrategy), concurrencyStrategy);
     }
 
+    /***
+     *  根据RequestCacheKey和并发策略，创建一个请求缓存：HystrixRequestCache
+     * @param rcKey RequestCacheKey
+     * @param concurrencyStrategy
+     * @return
+     */
     private static HystrixRequestCache getInstance(RequestCacheKey rcKey, HystrixConcurrencyStrategy concurrencyStrategy) {
         HystrixRequestCache c = caches.get(rcKey);
-        if (c == null) {
+        if (c == null) {//如果本地没有的话，则直接new一个并放到本地内存中
             HystrixRequestCache newRequestCache = new HystrixRequestCache(rcKey, concurrencyStrategy);
+            //设置到本地内存中
             HystrixRequestCache existing = caches.putIfAbsent(rcKey, newRequestCache);
             if (existing == null) {
                 // we won so use the new one
@@ -237,18 +250,21 @@ public class HystrixRequestCache {
      * RequestCacheKey 本次请求的缓存Key
      */
     private static class RequestCacheKey {
+        //1-HystrixCommandKey 2-HystrixCollapserKey
         private final short type; // used to differentiate between Collapser/Command if key is same between them
+        //HystrixCommandKey或HystrixCollapserKey
         private final String key;
+        //并发策略，默认是HystrixConcurrencyStrategyDefault
         private final HystrixConcurrencyStrategy concurrencyStrategy;
 
         /***
-         *
+         * 根据commandKey和HystrixConcurrencyStrategyDefault构建一个 RequestCacheKey 对象
          * @param commandKey commandKey
-         * @param concurrencyStrategy 并发策略
+         * @param concurrencyStrategy 并发策略，默认是 HystrixConcurrencyStrategyDefault
          */
         private RequestCacheKey(HystrixCommandKey commandKey, HystrixConcurrencyStrategy concurrencyStrategy) {
             type = 1;
-            if (commandKey == null) { //
+            if (commandKey == null) {
                 this.key = null;
             } else {
                 this.key = commandKey.name();
@@ -256,6 +272,11 @@ public class HystrixRequestCache {
             this.concurrencyStrategy = concurrencyStrategy;
         }
 
+        /***
+         *
+         * @param collapserKey
+         * @param concurrencyStrategy 默认是HystrixConcurrencyStrategyDefault
+         */
         private RequestCacheKey(HystrixCollapserKey collapserKey, HystrixConcurrencyStrategy concurrencyStrategy) {
             type = 2;
             if (collapserKey == null) {

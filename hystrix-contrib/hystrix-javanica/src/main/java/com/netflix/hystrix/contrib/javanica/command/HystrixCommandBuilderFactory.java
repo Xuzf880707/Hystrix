@@ -73,8 +73,11 @@ public class HystrixCommandBuilderFactory {
                 //调用HystrixCommand和FallBack创建两个对应的Actions，分别是commandAction和fallbackAction，并用一个CommandActions将它们一一绑定
                 .commandActions(createCommandActions(metaHolder))
                 .collapsedRequests(collapsedRequests)//根据collapsedPropeties创建合并的请求对象
+                //设置用于获得缓存key的CacheResultInvocationContext
                 .cacheResultInvocationContext(createCacheResultInvocationContext(metaHolder))//创建绑定添加缓存结果的上下文的对象
+                //设置用于移除缓存key的CacheResultInvocationContext
                 .cacheRemoveInvocationContext(createCacheRemoveInvocationContext(metaHolder))//创建绑定移除缓存结果的上下文的对象
+                //根据注解属性IgnoreExceptions获得忽视的异常列表
                 .ignoreExceptions(metaHolder.getCommandIgnoreExceptions())//初始化护忽视的异常列表
                 .executionType(metaHolder.getExecutionType())//设置执行类型。默认是同步的
                 .build();

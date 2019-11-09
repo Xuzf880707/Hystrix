@@ -86,10 +86,22 @@ public interface HystrixCircuitBreaker {
          *            Pass-thru to {@link HystrixCircuitBreaker}
          * @return {@link HystrixCircuitBreaker} for {@link HystrixCommandKey}
          */
+        /***
+         *  初始化创建一个熔断器 HystrixCircuitBreaker，默认是一个HystrixCircuitBreakerImpl实例
+         * @param key commandKey
+         * @param group groupKey
+         * @param properties
+         * @param metrics 一个统计类的流
+         * @return
+         * 1、根据commandKey的名称，从本地内存里获取
+         * 2、本地内存有的话直接返回，没有的话新建一个，并放到内存里
+         *
+         */
         public static HystrixCircuitBreaker getInstance(HystrixCommandKey key, HystrixCommandGroupKey group, HystrixCommandProperties properties, HystrixCommandMetrics metrics) {
             // this should find it for all but the first time
+            //本地内存中获取
             HystrixCircuitBreaker previouslyCached = circuitBreakersByCommand.get(key.name());
-            if (previouslyCached != null) {
+            if (previouslyCached != null) {//本地内存有，则直接返回
                 return previouslyCached;
             }
 
@@ -98,6 +110,7 @@ public interface HystrixCircuitBreaker {
             // Create and add to the map ... use putIfAbsent to atomically handle the possible race-condition of
             // 2 threads hitting this point at the same time and let ConcurrentHashMap provide us our thread-safety
             // If 2 threads hit here only one will get added and the other will get a non-null response instead.
+            //创建一个熔断器，并存放到本地内存中
             HystrixCircuitBreaker cbForCommand = circuitBreakersByCommand.putIfAbsent(key.name(), new HystrixCircuitBreakerImpl(key, group, properties, metrics));
             if (cbForCommand == null) {
                 // this means the putIfAbsent step just created a new one so let's retrieve and return it
@@ -149,11 +162,19 @@ public interface HystrixCircuitBreaker {
         private final AtomicLong circuitOpened = new AtomicLong(-1);
         private final AtomicReference<Subscription> activeSubscription = new AtomicReference<Subscription>(null);
 
+        /***
+         * 初始化创建一个熔断器，该熔断器将在执行命令时设置打开/关闭之间的电路
+         * @param key commandKey
+         * @param commandGroup groupKey
+         * @param properties
+         * @param metrics 统计类的流对象
+         */
         protected HystrixCircuitBreakerImpl(HystrixCommandKey key, HystrixCommandGroupKey commandGroup, final HystrixCommandProperties properties, HystrixCommandMetrics metrics) {
             this.properties = properties;
             this.metrics = metrics;
 
             //On a timer, this will set the circuit between OPEN/CLOSED as command executions occur
+            //在计时器上，这将在执行命令时设置打开/关闭之间的电路
             Subscription s = subscribeToStream();
             activeSubscription.set(s);
         }
@@ -161,6 +182,7 @@ public interface HystrixCircuitBreaker {
         private Subscription subscribeToStream() {
             /*
              * This stream will recalculate the OPEN/CLOSED status on every onNext from the health stream
+             * 此流将重新计算运行状况流中每个onNext的打开/关闭状态
              */
             return metrics.getHealthCountsStream()
                     .observe()

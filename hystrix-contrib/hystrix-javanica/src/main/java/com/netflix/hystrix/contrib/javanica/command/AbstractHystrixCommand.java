@@ -52,12 +52,27 @@ public abstract class AbstractHystrixCommand<T> extends com.netflix.hystrix.Hyst
      * @param builder
      */
     protected AbstractHystrixCommand(HystrixCommandBuilder builder) {
-        super(builder.getSetterBuilder().build());
+        /***
+         * HystrixCommandBuilder.build()返回一个Setter主要坐做了以下事情：
+         *      1、创建一个Setter,并初始化groupKey和commandKey
+         *      2、设置Setter的threadPoolKey
+         *      3、设置setter的ThreadPoolPropertiesDefaults
+         *      4、设置setter的CommandProperties
+         *
+         * super(Setter)做了以下事情：
+         *      初始化一个HystrixCommand对象，这个对象的熔断器熔断器和线程池都是空的
+         */
+        super(builder.getSetterBuilder().build());//创建一个HystrixCommandBuilder
+        //设置commandActions，包含commandMethod和fallbackMethod对应的commandActions
         this.commandActions = builder.getCommandActions();//获得commandActions
         this.collapsedRequests = builder.getCollapsedRequests();//获得CollapsedRequests
+        //设置用于获取cacheKey的cacheResultInvocationContext
         this.cacheResultInvocationContext = builder.getCacheResultInvocationContext();
+        //设置用于移除cacheKey的cacheResultInvocationContext
         this.cacheRemoveInvocationContext = builder.getCacheRemoveInvocationContext();
+        //设置要忽略的异常
         this.ignoreExceptions = builder.getIgnoreExceptions();
+        //设置执行同步类型
         this.executionType = builder.getExecutionType();
     }
 

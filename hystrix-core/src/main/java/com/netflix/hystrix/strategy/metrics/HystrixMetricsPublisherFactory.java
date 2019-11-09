@@ -100,10 +100,20 @@ public class HystrixMetricsPublisherFactory {
     // String is CommandKey.name() (we can't use CommandKey directly as we can't guarantee it implements hashcode/equals correctly)
     private final ConcurrentHashMap<String, HystrixMetricsPublisherCommand> commandPublishers = new ConcurrentHashMap<String, HystrixMetricsPublisherCommand>();
 
+    /***
+     *
+     * @param commandKey
+     * @param commandOwner groupKey
+     * @param metrics HystrixCommand的统计流类
+     * @param circuitBreaker 断路器
+     * @param properties
+     * @return
+     */
     /* package */ HystrixMetricsPublisherCommand getPublisherForCommand(HystrixCommandKey commandKey, HystrixCommandGroupKey commandOwner, HystrixCommandMetrics metrics, HystrixCircuitBreaker circuitBreaker, HystrixCommandProperties properties) {
         // attempt to retrieve from cache first
+        //判断本地内存是否存在
         HystrixMetricsPublisherCommand publisher = commandPublishers.get(commandKey.name());
-        if (publisher != null) {
+        if (publisher != null) {//本地内存存在的话直接返回
             return publisher;
         } else {
             synchronized (this) {
@@ -111,8 +121,10 @@ public class HystrixMetricsPublisherFactory {
                 if (existingPublisher != null) {
                     return existingPublisher;
                 } else {
+                    //创建一个默认的HystrixMetricsPublisherDefault，然后放到本地内存中
                     HystrixMetricsPublisherCommand newPublisher = HystrixPlugins.getInstance().getMetricsPublisher().getMetricsPublisherForCommand(commandKey, commandOwner, metrics, circuitBreaker, properties);
                     commandPublishers.putIfAbsent(commandKey.name(), newPublisher);
+                    //初始化HystrixMetricsPublisherDefault，默认这个方法不执行任何东西
                     newPublisher.initialize();
                     return newPublisher;
                 }

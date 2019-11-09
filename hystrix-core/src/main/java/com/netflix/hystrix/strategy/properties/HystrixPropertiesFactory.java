@@ -59,8 +59,9 @@ public class HystrixPropertiesFactory {
      * @return {@link HystrixCommandProperties} instance
      */
     public static HystrixCommandProperties getCommandProperties(HystrixCommandKey key, HystrixCommandProperties.Setter builder) {
+        //获得默认的HystrixPropertiesStrategy
         HystrixPropertiesStrategy hystrixPropertiesStrategy = HystrixPlugins.getInstance().getPropertiesStrategy();
-        //获得HystrixCommand的key
+        //从HystrixPropertiesStrategy中根据 key获得
         String cacheKey = hystrixPropertiesStrategy.getCommandPropertiesCacheKey(key, builder);
         if (cacheKey != null) {
             HystrixCommandProperties properties = commandProperties.get(cacheKey);
@@ -100,17 +101,21 @@ public class HystrixPropertiesFactory {
      * @return {@link HystrixThreadPoolProperties} instance
      */
     public static HystrixThreadPoolProperties getThreadPoolProperties(HystrixThreadPoolKey key, HystrixThreadPoolProperties.Setter builder) {
+        //获得对应的hystrixPropertiesStrategy
         HystrixPropertiesStrategy hystrixPropertiesStrategy = HystrixPlugins.getInstance().getPropertiesStrategy();
+        //从获得对应的hystrixPropertiesStrategy中获得 threadPoolKey
         String cacheKey = hystrixPropertiesStrategy.getThreadPoolPropertiesCacheKey(key, builder);
         if (cacheKey != null) {
+            //根据threadPoolKey从本地内存中获得相应的 HystrixThreadPoolProperties
             HystrixThreadPoolProperties properties = threadPoolProperties.get(cacheKey);
-            if (properties != null) {
+            if (properties != null) {//如果HystrixThreadPoolProperties为空
                 return properties;
             } else {
                 if (builder == null) {
                     builder = HystrixThreadPoolProperties.Setter();
                 }
                 // create new instance
+                //根据setter来创建一个HystrixThreadPoolProperties，并把它放到本地内存threadPoolProperties中
                 properties = hystrixPropertiesStrategy.getThreadPoolProperties(key, builder);
                 // cache and return
                 HystrixThreadPoolProperties existing = threadPoolProperties.putIfAbsent(cacheKey, properties);
