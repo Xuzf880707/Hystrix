@@ -314,6 +314,11 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
         });
     }
 
+    /***
+     * 根据HystrixCommand对象的fallback方法，获得一个Observable
+     * Observable用于广播调用getFallback方法
+     * @return
+     */
     @Override
     final protected Observable<R> getFallbackObservable() {
         return Observable.defer(new Func0<Observable<R>>() {
@@ -476,19 +481,26 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
         return "getFallback";
     }
 
+    /****
+     * 判断HystrixCommand里是否指定了fallback方法
+     * @return
+     */
     @Override
     protected boolean isFallbackUserDefined() {
+        //先根据commandKey判断本地内存里是否存在
         Boolean containsFromMap = commandContainsFallback.get(commandKey);
         if (containsFromMap != null) {
             return containsFromMap;
         } else {
             Boolean toInsertIntoMap;
             try {
+                //从HystrixCommand里判断是否定义了getFallback方法
                 getClass().getDeclaredMethod("getFallback");
                 toInsertIntoMap = true;
             } catch (NoSuchMethodException nsme) {
                 toInsertIntoMap = false;
             }
+            //将标识存储在本地内存里
             commandContainsFallback.put(commandKey, toInsertIntoMap);
             return toInsertIntoMap;
         }
