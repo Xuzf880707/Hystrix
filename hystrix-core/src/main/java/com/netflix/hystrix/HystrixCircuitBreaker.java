@@ -293,6 +293,10 @@ public interface HystrixCircuitBreaker {
             }
         }
 
+        /***
+         * 检查熔断器从打开到现在是否超过了配置的熔断的时间窗口
+         * @return
+         */
         private boolean isAfterSleepWindow() {
             //获得打开断路器的时间
             final long circuitOpenTime = circuitOpened.get();
@@ -302,6 +306,10 @@ public interface HystrixCircuitBreaker {
             return currentTime > circuitOpenTime + sleepWindowTime;
         }
 
+        /***
+         * 熔断器验证是否放行
+         * @return
+         */
         @Override
         public boolean attemptExecution() {
             //全局配置里：判断熔断器开关是否强制打开
@@ -312,7 +320,7 @@ public interface HystrixCircuitBreaker {
             if (properties.circuitBreakerForceClosed().get()) {
                 return true;
             }
-            //如果熔断器开关还没打开
+            //当前熔断器开关关闭
             if (circuitOpened.get() == -1) {
                 return true;
             } else {
@@ -322,6 +330,7 @@ public interface HystrixCircuitBreaker {
                     //if the executing command succeeds, the status will transition to CLOSED
                     //if the executing command fails, the status will transition to OPEN
                     //if the executing command gets unsubscribed, the status will transition to OPEN
+                    //如果超过了熔断的时间窗口，则尝试放行，熔断器开关从打开状态修改为半开状态
                     if (status.compareAndSet(Status.OPEN, Status.HALF_OPEN)) {
                         return true;
                     } else {

@@ -158,10 +158,20 @@ public abstract class AbstractHystrixCommand<T> extends com.netflix.hystrix.Hyst
      * @param action the action
      * @return result of command action execution
      */
+    /***
+     * 执行CommandMethod操作，如果希望某个操作失败时异常可忽略，则将其传播为HystrixBadRequestException。否则会触发fallback方法
+     *  注意：
+     *      如果命令中的异常直接拓展于Throwable，那么这个异常作为原始的异常进行重新抛出，因为HystrixCommand.run()允许抛出一个Exception的子类，
+     *      因此，我们需要在运行时异常中包装原因，无论如何，在这种情况下，将触发回退逻辑。
+     * @param action
+     * @return
+     * @throws Exception
+     */
     Object process(Action action) throws Exception {
         Object result;
         try {
             result = action.execute();
+            //清空cacheKey对应的缓存
             flushCache();
         } catch (CommandActionExecutionException throwable) {
             Throwable cause = throwable.getCause();

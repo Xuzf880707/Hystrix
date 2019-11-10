@@ -315,6 +315,7 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
     }
 
     /***
+     * 当执行HystrixCommand失败，比如超时等，会通知Observable回调该方法
      * 根据HystrixCommand对象的fallback方法，获得一个Observable
      * Observable用于广播调用getFallback方法
      * @return
@@ -325,6 +326,7 @@ public abstract class HystrixCommand<R> extends AbstractCommand<R> implements Hy
             @Override
             public Observable<R> call() {
                 try {
+                    //这边默认会执行 GenericCommand.getFallback方法
                     return Observable.just(getFallback());
                 } catch (Throwable ex) {
                     return Observable.error(ex);

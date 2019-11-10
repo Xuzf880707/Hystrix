@@ -42,6 +42,7 @@ public class GenericCommand extends AbstractHystrixCommand<Object> {
     @Override
     protected Object run() throws Exception {
         LOGGER.debug("execute command: {}", getCommandKey().name());
+        //开始执行Command命令
         return process(new Action() {
             @Override
             Object execute() {
@@ -63,16 +64,29 @@ public class GenericCommand extends AbstractHystrixCommand<Object> {
      *
      * @return result of invocation of fallback method or RuntimeException
      */
+    /***
+     * 当执行HystrixCommand失败，比如超时等，会通知Observable回调该方法
+     * 根据HystrixCommand对象的fallback方法，获得一个Observable
+     * @return
+     * 这里，我们可以发现，fallback的请求参数数组里会多了一个Exception参数
+     */
     @Override
     protected Object getFallback() {
+        //获得CommandMethod对应的fallBackAction
         final CommandAction commandAction = getFallbackAction();
         if (commandAction != null) {
             try {
                 return process(new Action() {
                     @Override
                     Object execute() {
+                        //获得Fallback的元信息
                         MetaHolder metaHolder = commandAction.getMetaHolder();
-                        Object[] args = createArgsForFallback(metaHolder, getExecutionException());
+                        //将异常信息拼接到fallback的请求参数数组里，所以我们可以从fallback里的请求参数直接获得异常信息
+                        Object[] args = createArgsForFallback(
+                                metaHolder,
+                                getExecutionException() //  从执行结果中获得执行的异常信息
+                        );
+                        //反射调用fallback方法
                         return commandAction.executeWithArgs(metaHolder.getFallbackExecutionType(), args);
                     }
                 });
