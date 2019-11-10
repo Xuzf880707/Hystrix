@@ -72,7 +72,7 @@ public abstract class AbstractHystrixCommand<T> extends com.netflix.hystrix.Hyst
         this.cacheRemoveInvocationContext = builder.getCacheRemoveInvocationContext();
         //设置要忽略的异常
         this.ignoreExceptions = builder.getIgnoreExceptions();
-        //设置执行同步类型
+        //设置执行同步类型。根据CommandMethod的返回值确定
         this.executionType = builder.getExecutionType();
     }
 

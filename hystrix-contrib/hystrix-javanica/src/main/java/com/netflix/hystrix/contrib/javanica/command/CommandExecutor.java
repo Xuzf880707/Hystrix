@@ -38,8 +38,8 @@ public class CommandExecutor {
     /**
      * Calls a method of {@link HystrixExecutable} in accordance with specified execution type.
      *
-     * @param invokable  {@link HystrixInvokable}
-     * @param metaHolder {@link MetaHolder}
+     * @param invokable  {@link HystrixInvokable} HystrixCommand对象
+     * @param metaHolder {@link MetaHolder} HystrixCommand的元信息
      * @return the result of invocation of specific method.
      * @throws RuntimeException
      */
@@ -49,7 +49,8 @@ public class CommandExecutor {
 
         switch (executionType) {//检查executionType
             case SYNCHRONOUS: {//如果是同步调用
-                //从这边可以看出，同步调用，调用了execute方法，调用HystrixCommand.execute，转换成一个HystrixExecutable
+                //从这边可以看出，同步调用，调用了execute方法，调用HystrixCommand.execute，
+                // 转换成一个 HystrixExecutable ，并调用execute方法,s实际调用的HystrixCommand.execute方法
                 return castToExecutable(invokable, executionType).execute();
             }
             case ASYNCHRONOUS: {//如果是异步调用

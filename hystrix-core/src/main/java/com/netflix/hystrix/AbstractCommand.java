@@ -576,7 +576,7 @@ import java.util.concurrent.atomic.AtomicReference;
                     //TODO make a new error type for this
                     throw new HystrixRuntimeException(FailureType.BAD_REQUEST_EXCEPTION, _cmd.getClass(), getLogMessagePrefix() + " command executed multiple times - this is not permitted.", ex, null);
                 }
-                //命令开始时间戳
+                //记录命令开始时间戳
                 commandStartTimestamp = System.currentTimeMillis();
                 //打印日志
                 if (properties.requestLogEnabled().get()) {
@@ -1910,7 +1910,7 @@ import java.util.concurrent.atomic.AtomicReference;
      * @return
      */
     protected boolean isRequestCachingEnabled() {
-        //需要缓存的配置打开，且定义了getCacheKey方法，且返回非null
+        //需要缓存的配置打开，且定义了getCacheKey方法，且返回非null。这里调用实现累 AbstractHystrixCommand.getCacheKey
         return properties.requestCacheEnabled().get() && getCacheKey() != null;
     }
 

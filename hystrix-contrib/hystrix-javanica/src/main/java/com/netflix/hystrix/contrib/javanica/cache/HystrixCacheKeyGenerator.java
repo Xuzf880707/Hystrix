@@ -44,15 +44,25 @@ public class HystrixCacheKeyGenerator {
         return INSTANCE;
     }
 
+    /***
+     * 根据 cacheInvocationContext(比如：cacheResultInvocationContext/cacheRemoveInvocationContext）生成一个cachekey
+     *      这里主要是反射调用cacheKeyMethod方法生成cacheKey
+     * @param cacheInvocationContext
+     * @return
+     * @throws HystrixCacheKeyGenerationException
+     *
+     */
     public HystrixGeneratedCacheKey generateCacheKey(CacheInvocationContext<? extends Annotation> cacheInvocationContext) throws HystrixCacheKeyGenerationException {
+        //获得cacheInvocationContext中的CacheKeyMethod方法
         MethodExecutionAction cacheKeyMethod = cacheInvocationContext.getCacheKeyMethod();
-        if (cacheKeyMethod != null) {
+        if (cacheKeyMethod != null) {//如果定义了 cacheKeyMethod
             try {
+                //直接调用cacheKeyMethod生成cacheKey
                 return new DefaultHystrixGeneratedCacheKey((String) cacheKeyMethod.execute(cacheInvocationContext.getExecutionType()));
             } catch (Throwable throwable) {
                 throw new HystrixCacheKeyGenerationException(throwable);
             }
-        } else {
+        } else {//如果为定义cacheKeyMethod
             if (cacheInvocationContext.hasKeyParameters()) {
                 StringBuilder cacheKeyBuilder = new StringBuilder();
                 for (CacheInvocationParameter parameter : cacheInvocationContext.getKeyParameters()) {
