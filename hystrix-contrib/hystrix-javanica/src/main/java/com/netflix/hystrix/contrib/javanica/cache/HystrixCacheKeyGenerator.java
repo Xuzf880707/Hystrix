@@ -52,24 +52,27 @@ public class HystrixCacheKeyGenerator {
      * @throws HystrixCacheKeyGenerationException
      *
      */
-    public HystrixGeneratedCacheKey generateCacheKey(CacheInvocationContext<? extends Annotation> cacheInvocationContext) throws HystrixCacheKeyGenerationException {
+    public HystrixGeneratedCacheKey generateCacheKey(
+            CacheInvocationContext<? extends Annotation> cacheInvocationContext)
+            throws HystrixCacheKeyGenerationException {
         //获得cacheInvocationContext中的CacheKeyMethod方法
         MethodExecutionAction cacheKeyMethod = cacheInvocationContext.getCacheKeyMethod();
         if (cacheKeyMethod != null) {//如果定义了 cacheKeyMethod
-            try {
-                //直接调用cacheKeyMethod生成cacheKey
+            try {//直接调用cacheKeyMethod生成cacheKey
                 return new DefaultHystrixGeneratedCacheKey((String) cacheKeyMethod.execute(cacheInvocationContext.getExecutionType()));
             } catch (Throwable throwable) {
                 throw new HystrixCacheKeyGenerationException(throwable);
             }
-        } else {//如果为定义cacheKeyMethod
-            if (cacheInvocationContext.hasKeyParameters()) {
+        } else {//如果未定义cacheKeyMethod属性
+            if (cacheInvocationContext.hasKeyParameters()) {//如果指定了带CacheKey注解的参数
                 StringBuilder cacheKeyBuilder = new StringBuilder();
+                //遍历所有CacheKey注解参数
                 for (CacheInvocationParameter parameter : cacheInvocationContext.getKeyParameters()) {
-                    CacheKey cacheKey = parameter.getCacheKeyAnnotation();
+                    CacheKey cacheKey = parameter.getCacheKeyAnnotation();//获得CacheKey
+                    //如果cacheKey不为空，且指定CacheKey中的value，如果cacheKey根据多个属性来确定后，它们直接用'.'分割
                     if (cacheKey != null && StringUtils.isNotBlank(cacheKey.value())) {
                         appendPropertyValue(cacheKeyBuilder, Arrays.asList(StringUtils.split(cacheKey.value(), ".")), parameter.getValue());
-                    } else {
+                    } else {//如果cache没有指定value，则整个参数作为cacheKey
                         cacheKeyBuilder.append(parameter.getValue());
                     }
                 }

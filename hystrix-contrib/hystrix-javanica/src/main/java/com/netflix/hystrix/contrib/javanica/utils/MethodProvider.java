@@ -216,7 +216,7 @@ public final class MethodProvider {
          *      如果配置了 fallback ，那么fallback的参数必须跟HystrixCommand保持一致
          */
         private FallbackMethod doFind(Class<?> enclosingType, Method commandMethod, boolean extended) {
-            //获得HystrixCommand配置了的对应的fallbakc方法
+            //获得HystrixCommand配置了的对应的fallbakc方法名
             String name = getFallbackName(enclosingType, commandMethod);
             Class<?>[] fallbackParameterTypes = null;
             if (isDefault()) {//判断是否默认的，默认是false
@@ -224,18 +224,19 @@ public final class MethodProvider {
             } else {//根据HystrixCommand注解的方法获得请求参数，从这里，我们可以发现，fallback的参数必须跟HystrixCommand注解的方法保持一致
                 fallbackParameterTypes = commandMethod.getParameterTypes();
             }
-
+            //忽略HystrixCommand的最后一个Throwable参数
             if (extended && fallbackParameterTypes[fallbackParameterTypes.length - 1] == Throwable.class) {
                 fallbackParameterTypes = ArrayUtils.remove(fallbackParameterTypes, fallbackParameterTypes.length - 1);
             }
             //维护一个fallBack参数的类型数组，我们可以发现，这边维护的数组长度比实际的参数个多一个，它是为了存放额外的Throwable.class
-            Class<?>[] extendedFallbackParameterTypes = Arrays.copyOf(fallbackParameterTypes,
-                    fallbackParameterTypes.length + 1);
-            //存放额外的Throwable.class，这就是我们如果在fallback里添加了Throwable的参数，就能捕获到异常的原油
+            Class<?>[] extendedFallbackParameterTypes = Arrays.copyOf(fallbackParameterTypes,fallbackParameterTypes.length + 1);
+            //存放额外的Throwable.class，这就是我们如果在fallback里添加了Throwable的参数，就能捕获到异常的理由
+            //所以我们可以发现，extendedFallbackParameterTypes相对于fallbackParameterTypes多了个Throwable.class参数
             extendedFallbackParameterTypes[fallbackParameterTypes.length] = Throwable.class;
             //根据方法名和参数在对应的类里查找定位对应的带异常处理的fallback方法。
             Optional<Method> exFallbackMethod = getMethod(enclosingType, name, extendedFallbackParameterTypes);
             //根据方法名和参数在对应的类里查找定位对应的不带异常处理的fallback方法。
+            // 这里我们可以发现fallbackMethod的参数必须跟HystrixCommand一致
             Optional<Method> fMethod = getMethod(enclosingType, name, fallbackParameterTypes);
             //如果指定了exFallbackMethod，则返回exFallbackMethod，不然就判断fMethod，如果都没有的话，则返回null
             Method method = exFallbackMethod.or(fMethod).orNull();

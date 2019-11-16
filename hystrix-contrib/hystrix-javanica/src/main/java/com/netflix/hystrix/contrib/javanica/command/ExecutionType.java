@@ -52,8 +52,10 @@ public enum ExecutionType {
      * @return the execution type {@link ExecutionType}
      */
     public static ExecutionType getExecutionType(Class<?> type) {
-        if (Future.class.isAssignableFrom(type)) {//如果返回类型是Future，则返回异步ASYNCHRONOUS
+        //如果返回类型是Future，则返回异步ASYNCHRONOUS
+        if (Future.class.isAssignableFrom(type)) {
             return ExecutionType.ASYNCHRONOUS;
+           //如果是Observable.class, Single.class, Completable.class三者之一，则返回OBSERVABLE
         } else if (isRxType(type)) {
             return ExecutionType.OBSERVABLE;
         } else {

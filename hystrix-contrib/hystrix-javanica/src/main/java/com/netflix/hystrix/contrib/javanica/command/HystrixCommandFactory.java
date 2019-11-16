@@ -41,7 +41,8 @@ public class HystrixCommandFactory {
         } else if (metaHolder.isObservable()) {//是否是Objservable
             executable = new GenericObservableCommand(HystrixCommandBuilderFactory.getInstance().create(metaHolder));
         } else {//默认是一个HystrixCommand对象，继承了AbstractCommand
-            executable = new GenericCommand(HystrixCommandBuilderFactory.getInstance().create(metaHolder));
+            executable = new GenericCommand(HystrixCommandBuilderFactory.getInstance()//调用HystrixCommandBuilderFactory实例来创建
+                    .create(metaHolder));
         }
         return executable;
     }

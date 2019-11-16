@@ -220,13 +220,15 @@ public class FallbackMethod {
 
     /***
      * 校验fallbackMethod返回类型和commandMethod的参数要匹配
-     * @param commandReturnType
-     * @param fallbackReturnType
-     * @param commandMethod
-     * @param fallbackMethod
+     * @param commandReturnType hystrixCommand的返回类型
+     * @param fallbackReturnType fallBackMethod的返沪类型
+     * @param commandMethod hystrixCommand
+     * @param fallbackMethod fallBackMethod
      */
-    private void validatePlainReturnType(Class<?> commandReturnType, Class<?> fallbackReturnType, Method commandMethod, Method fallbackMethod) {
-        if (!commandReturnType.isAssignableFrom(fallbackReturnType)) {//校验fallbackMethod返回类型和commandMethod的参数要一致
+    private void validatePlainReturnType(Class<?> commandReturnType, Class<?> fallbackReturnType,
+                                         Method commandMethod, Method fallbackMethod) {
+        //校验fallbackMethod返回类型和commandMethod的返回类型一致，或者是commandMethod的返回类型的子类
+        if (!commandReturnType.isAssignableFrom(fallbackReturnType)) {
             throw new FallbackDefinitionException(createErrorMsg(commandMethod, fallbackMethod, "Fallback method '"
                     + fallbackMethod + "' must return: " + commandReturnType + " or its subclass"));
         }

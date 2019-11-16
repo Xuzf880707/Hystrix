@@ -102,8 +102,9 @@ public class HystrixCommandAspect {
         MetaHolderFactory metaHolderFactory = META_HOLDER_FACTORY_MAP.get(HystrixPointcutType.of(method));
         //根据MetaHolderFactory解析切面属性并返回注解元信息。返回的MetaHolder包含了HystrixCommand方法HystrixCommandFactory的所有元信息
         MetaHolder metaHolder = metaHolderFactory.create(joinPoint);
-        //根据MetaHolder创建一个HystrixCommand实例
-        HystrixInvokable invokable = HystrixCommandFactory.getInstance().create(metaHolder);
+        //GenericSetterBuilder 会根据MetaHolder创建一个HystrixCommand实例, 一个HystrixCommand对应一个 GenericSetterBuilder
+        HystrixInvokable invokable = HystrixCommandFactory.getInstance()//默认是 HystrixCommandFactory
+                                    .create(metaHolder);//会调用HystrixCommandBuilderFactory来创建 HystrixCommandBuilderFactory
         //如果配置了Collapser，则获得Collapser的ExecutionType,不然就获得HystrixCommand的executionType
         ExecutionType executionType = metaHolder.isCollapserAnnotationPresent() ?
                 metaHolder.getCollapserExecutionType() : metaHolder.getExecutionType();
@@ -181,18 +182,32 @@ public class HystrixCommandAspect {
      * A factory to create MetaHolder depending on {@link HystrixPointcutType}.
      */
     private static abstract class MetaHolderFactory {
+        /***
+         * 解析HystrixCommand注解，并维护在一个元信息对象MetaHolder
+         * @param joinPoint 切点
+         * @return
+         */
         public MetaHolder create(final ProceedingJoinPoint joinPoint) {
             //添加HystrixCommand或HystrixCollaper注解方法
             Method method = getMethodFromTarget(joinPoint);
-            Object obj = joinPoint.getTarget();//添加了注解的被代理对象
+            Object obj = joinPoint.getTarget();//添加了HystrixCommand注解的实际对象
             Object[] args = joinPoint.getArgs();//方法参数
-            Object proxy = joinPoint.getThis();//代理对象
+            Object proxy = joinPoint.getThis();//代理对象，它是obj的代理对象
 
             //调用CommandMetaHolderFactory或CollapserMetaHolderFactory创建MetaHolder
             //MetaHolder绑定了一个builder
             return create(proxy, method, obj, args, joinPoint);
         }
 
+        /***
+         * 这边会交给它的实现类来初始化解析MetaHolder
+         * @param proxy
+         * @param method
+         * @param obj
+         * @param args
+         * @param joinPoint
+         * @return
+         */
         public abstract MetaHolder create(Object proxy, Method method, Object obj, Object[] args, final ProceedingJoinPoint joinPoint);
 
         /***
@@ -210,8 +225,12 @@ public class HystrixCommandAspect {
                     .args(args).method(method).obj(obj).proxyObj(proxy)
                     .joinPoint(joinPoint);
             //根据类和HystrixCommand初始化fallBack对象
+            /****
+             * 根据类和HystrixCommand初始化fallBack对象
+             *
+             */
             setFallbackMethod(builder, obj.getClass(), method);
-            //根据DefaultProperties注解，设置builder中默认的DefaultProperties
+            //根据类上的DefaultProperties注解，设置builder中默认的DefaultProperties
             builder = setDefaultProperties(builder, obj.getClass(), joinPoint);
             return builder;
         }
@@ -290,13 +309,13 @@ public class HystrixCommandAspect {
 
     /***
      * CommandMetaHolderFactory用于解析HystixCommand注解，并返回一个MethodHolder
-     *
+     *  它是 MetaHolderFactory的一个实现类。主要是负责实现解析HystrixCommand命令，并初始化元信息对象MetaHolder
      *
      */
     private static class CommandMetaHolderFactory extends MetaHolderFactory {
         @Override
         public MetaHolder create(Object proxy, Method method, Object obj, Object[] args, final ProceedingJoinPoint joinPoint) {
-            //获得 HystrixCommand注解
+            //获得 HystrixCommand 注解对象
             HystrixCommand hystrixCommand = method.getAnnotation(HystrixCommand.class);
             //根据返回参数获得执行类型:ASYNCHRONOUS/OBSERVABLE/SYNCHRONOUS
             //  ASYNCHRONOUS：返回值中是Future类型
@@ -380,12 +399,12 @@ public class HystrixCommandAspect {
      *
      */
     private static MetaHolder.Builder setDefaultProperties(MetaHolder.Builder builder, Class<?> declaringClass, final ProceedingJoinPoint joinPoint) {
-        //获得DefaultProperties注解
+        //获得类定义的默认注解：DefaultProperties
         Optional<DefaultProperties> defaultPropertiesOpt = AopUtils.getAnnotation(joinPoint, DefaultProperties.class);
         //默认的groupKey是类名
         builder.defaultGroupKey(declaringClass.getSimpleName());
-
-        if (defaultPropertiesOpt.isPresent()) {//判断是否配置了DefaultProperties注解
+        //判断类上是否配置了默认注解：DefaultProperties
+        if (defaultPropertiesOpt.isPresent()) {
             //获得对应的DefaultProperties注解对象
             DefaultProperties defaultProperties = defaultPropertiesOpt.get();
             builder.defaultProperties(defaultProperties);
@@ -406,6 +425,7 @@ public class HystrixCommandAspect {
      * @param declaringClass
      * @param commandMethod
      * @return
+     * 1、
      */
     private static MetaHolder.Builder setFallbackMethod(MetaHolder.Builder builder, Class<?> declaringClass, Method commandMethod) {
         /**
@@ -418,7 +438,8 @@ public class HystrixCommandAspect {
             builder
                     .fallbackMethod(fallbackMethod.getMethod())//将fallbackMethod绑定到MetaHolder.Builder上
                     .fallbackExecutionType(//设置fallbackMethod对应的执行类型
-                            ExecutionType.getExecutionType(//根据fallbackMethod返回类型获得执行执行类型ASYNCHRONOUS,SYNCHRONOUS,OBSERVABLE
+                            //根据fallbackMethod返回类型获得执行类型ASYNCHRONOUS,SYNCHRONOUS,OBSERVABLE
+                            ExecutionType.getExecutionType(
                                     fallbackMethod.getMethod().getReturnType()//获得fallbackMethod返回类型
                             )
                     );

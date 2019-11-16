@@ -43,7 +43,7 @@ public class CacheInvocationContextFactory {
      *
      * metaHolder：HystrixCommand注解的方法对象
      */
-    public static CacheInvocationContext<CacheResult> createCacheResultInvocationContext(MetaHolder metaHolder) {
+        public static CacheInvocationContext<CacheResult> createCacheResultInvocationContext(MetaHolder metaHolder) {
         //获得commandMethod的方法
         Method method = metaHolder.getMethod();
         //判断方法是否存在CacheResult注解
@@ -97,10 +97,8 @@ public class CacheInvocationContextFactory {
              * metaHolder.getObj().getClass()：CommandMethod所属的类对象
              * method：CacheResult注解中的cacheKeyMethod属性值
              * metaHolder.getMethod().getParameterTypes()：CommandMethod方法的参数类型数组
-             *
              * 在CommandMethod所属的类对象中查找对应的方法对象cacheKeyMethod是否已存在，如果不存在，则抛出异常
-             *
-             * 注意：cacheKeyMethod其实是用来指定
+             * 注意：从这里，我们可以发现cacheKeyMethod方法的参数必须跟CommandMethod一致
              */
             Method cacheKeyMethod = getDeclaredMethod(metaHolder.getObj().getClass(), method,
                     metaHolder.getMethod().getParameterTypes());
@@ -108,7 +106,7 @@ public class CacheInvocationContextFactory {
                 throw new HystrixCachingException("method with name '" + method + "' doesn't exist in class '"
                         + metaHolder.getObj().getClass() + "'");
             }
-            //如果指定了cacheKeyMethod属性来返回缓存key的话，这这个方法必须返回字符串
+            //如果指定了cacheKeyMethod属性来返回缓存key的话，这个方法必须返回字符串
             if (!cacheKeyMethod.getReturnType().equals(String.class)) {
                 throw new HystrixCachingException("return type of cacheKey method must be String. Method: '" + method + "', Class: '"
                         + metaHolder.getObj().getClass() + "'");

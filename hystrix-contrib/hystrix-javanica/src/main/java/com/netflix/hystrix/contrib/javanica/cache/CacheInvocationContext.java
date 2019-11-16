@@ -40,8 +40,9 @@ public class CacheInvocationContext<A extends Annotation> {
     private final MethodExecutionAction cacheKeyMethod;
     private final ExecutionType executionType = ExecutionType.SYNCHRONOUS;
     private final A cacheAnnotation;
-
+    //存放了存放了某个HystrixCommand中的方法中的所有参数，包括不带有CacheKey注解的参数
     private List<CacheInvocationParameter> parameters = Collections.emptyList();
+    //存放了某个HystrixCommand中的方法中带有CacheKey注解的参数
     private List<CacheInvocationParameter> keyParameters = Collections.emptyList();
 
     /**
@@ -53,30 +54,38 @@ public class CacheInvocationContext<A extends Annotation> {
      * @param method          the method annotated with on of caching annotations
      * @param args            the method arguments
      */
-    public CacheInvocationContext(A cacheAnnotation, MethodExecutionAction cacheKeyMethod, Object target, Method method, Object... args) {
-        this.method = method;
-        this.target = target;
-        this.cacheKeyMethod = cacheKeyMethod;
-        this.cacheAnnotation = cacheAnnotation;
+    /***
+     *
+     * @param cacheAnnotation CacheResult或CacheRemove注解
+     * @param cacheKeyMethod CacheResult或CacheRemove注解中的方法，可能为null
+     * @param target 被代理对象
+     * @param method hystrixCommand方法
+     * @param args hystrixCommand方法参数
+     */
+    public CacheInvocationContext(A cacheAnnotation, MethodExecutionAction cacheKeyMethod,Object target, Method method, Object... args) {
+        this.method = method; this.target = target;
+        this.cacheKeyMethod = cacheKeyMethod;this.cacheAnnotation = cacheAnnotation;
+        //获得method请求参数类型数组，可能存在多个参数
         Class<?>[] parametersTypes = method.getParameterTypes();
-        int parameterCount = parametersTypes.length;
-        if (parameterCount > 0) {
+        int parameterCount = parametersTypes.length;//参数个数
+        if (parameterCount > 0) {//method的注解对象
             Annotation[][] parametersAnnotations = method.getParameterAnnotations();
             ImmutableList.Builder<CacheInvocationParameter> parametersBuilder = ImmutableList.builder();
+            //遍历所有cacheKey注解对象，并添加到parametersBuilder
             for (int pos = 0; pos < parameterCount; pos++) {
                 Class<?> paramType = parametersTypes[pos];
                 Object val = args[pos];
                 parametersBuilder.add(new CacheInvocationParameter(paramType, val, parametersAnnotations[pos], pos));
             }
             parameters = parametersBuilder.build();
-            // get key parameters
+            // 遍历所有的参数，过滤掉未添加CacheKey注解的参数， 所以filtered经过过滤只包含带CacheKey的参数
             Iterable<CacheInvocationParameter> filtered = Iterables.filter(parameters, new Predicate<CacheInvocationParameter>() {
                 @Override
-                public boolean apply(CacheInvocationParameter input) {
+                public boolean apply(CacheInvocationParameter input) {//校验是否添加了CacheKey注解
                     return input.hasCacheKeyAnnotation();
                 }
             });
-            if (filtered.iterator().hasNext()) {
+            if (filtered.iterator().hasNext()) {//将添加了cacheKey注解的参数列表放到keyParameters
                 keyParameters = ImmutableList.<CacheInvocationParameter>builder().addAll(filtered).build();
             } else {
                 keyParameters = parameters;

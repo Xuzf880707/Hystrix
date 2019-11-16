@@ -1442,7 +1442,7 @@ import java.util.concurrent.atomic.AtomicReference;
      * 
      * @return TryableSemaphore
      *  1、如果执行的策略是信号量：
-     *      则根据commandKey检查本地内存是否有对应的信号量对象，有直接返回，没有的话，要根据隔离策略属性新建一个，并存放到内存里
+     *      则根据commandKey检查本地内存是否有对应的信号量发射器对象，有直接返回，没有的话，要根据隔离策略属性新建一个，并存放到内存里
      *          TryableSemaphoreActual
      *  2、如果执行的策略是线程：
      *      则直接返回一个默认的TryableSemaphoreNoOp
@@ -1453,10 +1453,11 @@ import java.util.concurrent.atomic.AtomicReference;
         //如果是信号量隔离的话，则根据commandkey获得信号量
         if (properties.executionIsolationStrategy().get() == ExecutionIsolationStrategy.SEMAPHORE) {
             if (executionSemaphoreOverride == null) {//默认是null
-
+                //根据HystrixCommand的commandKey来获得信号量发射器，并维护到本地内存里。
+                //所以我们可以知道，相同的commandKey会共享信号量发射器
                 TryableSemaphore _s = executionSemaphorePerCircuit.get(commandKey.name());
                 if (_s == null) {
-                    // we didn't find one cache so setup
+                    // 通过executionIsolationSemaphoreMaxConcurrentRequests控制信号量发射器最大的信号量
                     executionSemaphorePerCircuit.putIfAbsent(commandKey.name(), new TryableSemaphoreActual(properties.executionIsolationSemaphoreMaxConcurrentRequests()));
                     // assign whatever got set (this or another thread)
                     return executionSemaphorePerCircuit.get(commandKey.name());

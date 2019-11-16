@@ -38,11 +38,19 @@ public class CacheInvocationParameter {
     private final Set<Annotation> annotations;
     private final int position;
 
+    /***
+     *
+     * @param rawType 参数类型
+     * @param value 参数值
+     * @param annotations
+     * @param position
+     */
     public CacheInvocationParameter(Class<?> rawType, Object value, Annotation[] annotations, int position) {
         this.rawType = rawType;
         this.value = value;
         this.annotations = ImmutableSet.<Annotation>builder().addAll(Arrays.asList(annotations)).build();
         this.position = position;
+        //获得@CacheKey注解对象，如果没有注解的话，则返回null
         this.cacheKeyAnnotation = (CacheKey) cacheKeyAnnotation();
     }
 
@@ -100,6 +108,10 @@ public class CacheInvocationParameter {
         return position;
     }
 
+    /***
+     * 检查校验参数是否添加了CacheKey注解，如果没有则返回null
+     * @return
+     */
     private Annotation cacheKeyAnnotation() {
         return Iterables.tryFind(annotations, new Predicate<Annotation>() {
             @Override
