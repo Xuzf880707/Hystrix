@@ -87,10 +87,15 @@ public class HystrixTimer {
      *            TimerListener implementation that will be triggered according to its <code>getIntervalTimeInMilliseconds()</code> method implementation.
      * @return reference to the TimerListener that allows cleanup via the <code>clear()</code> method
      */
+    /**
+     *
+     * @param listener
+     * @return TimerReference，作用是一旦任务执行结束或者已经判定为执行超时，立即中断TimerListener的执行。
+     */
     public Reference<TimerListener> addTimerListener(final TimerListener listener) {
+        //根据Timeout配置，初始化调度线程池-ScheduledThreadPoolExecutor
         startThreadIfNeeded();
-        // add the listener
-
+        //将TimerListener封装成一个任务
         Runnable r = new Runnable() {
 
             @Override
@@ -102,8 +107,13 @@ public class HystrixTimer {
                 }
             }
         };
-
-        ScheduledFuture<?> f = executor.get().getThreadPool().scheduleAtFixedRate(r, listener.getIntervalTimeInMilliseconds(), listener.getIntervalTimeInMilliseconds(), TimeUnit.MILLISECONDS);
+        //以固定频率执行TimerListener，执行间隔即为超时时间
+        ScheduledFuture<?> f = executor.get().getThreadPool().scheduleAtFixedRate
+                                    (r,
+                                    listener.getIntervalTimeInMilliseconds(),
+                                    listener.getIntervalTimeInMilliseconds(),
+                                    TimeUnit.MILLISECONDS);
+        //返回TimerReference给调用者
         return new TimerReference(listener, f);
     }
 

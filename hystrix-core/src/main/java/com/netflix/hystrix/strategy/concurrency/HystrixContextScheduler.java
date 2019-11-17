@@ -154,7 +154,9 @@ public class HystrixContextScheduler extends Scheduler {
         public boolean isUnsubscribed() {
             return subscription.isUnsubscribed();
         }
-
+        /**
+         * 该方法在任务被执行的时候调用
+         */
         @Override
         public Subscription schedule(final Action0 action) {
             if (subscription.isUnsubscribed()) {
@@ -162,14 +164,15 @@ public class HystrixContextScheduler extends Scheduler {
                 return Subscriptions.unsubscribed();
             }
 
-            // This is internal RxJava API but it is too useful.
+            //用RxJava API包装要执行的任务
             ScheduledAction sa = new ScheduledAction(action);
 
             subscription.add(sa);
             sa.addParent(subscription);
-
+            //交由Hystrix内置线程池执行
             ThreadPoolExecutor executor = (ThreadPoolExecutor) threadPool.getExecutor();
             FutureTask<?> f = (FutureTask<?>) executor.submit(sa);
+            //为ScheduleAction添加一个Subscription，用于unSubscribe()时被调用
             sa.add(new FutureCompleterWithConfigurableInterrupt(f, shouldInterruptThread, executor));
 
             return sa;
