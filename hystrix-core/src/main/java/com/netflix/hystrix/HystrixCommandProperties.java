@@ -37,7 +37,9 @@ import com.netflix.hystrix.util.HystrixRollingPercentile;
  */
 public abstract class HystrixCommandProperties {
     private static final Logger logger = LoggerFactory.getLogger(HystrixCommandProperties.class);
-
+    /***
+     * HystrixCommand的默认参数
+     */
     /* defaults */
     /* package */ static final Integer default_metricsRollingStatisticalWindow = 10000;// default => statisticalWindow: 10000 = 10 seconds (and default of 10 buckets so each bucket is 1 second)
     private static final Integer default_metricsRollingStatisticalWindowBuckets = 10;// default => statisticalWindowBuckets: 10 = 10 buckets in a 10 second window so each bucket is 1 second
@@ -48,6 +50,7 @@ public abstract class HystrixCommandProperties {
     /* package */ static final Boolean default_circuitBreakerForceClosed = false;// default => ignoreErrors = false 
     private static final Integer default_executionTimeoutInMilliseconds = 1000; // default => executionTimeoutInMilliseconds: 1000 = 1 second
     private static final Boolean default_executionTimeoutEnabled = true;
+    //默认采用线程池隔离
     private static final ExecutionIsolationStrategy default_executionIsolationStrategy = ExecutionIsolationStrategy.THREAD;
     private static final Boolean default_executionIsolationThreadInterruptOnTimeout = true;
     private static final Boolean default_executionIsolationThreadInterruptOnFutureCancel = false;

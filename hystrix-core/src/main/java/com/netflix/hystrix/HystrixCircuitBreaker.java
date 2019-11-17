@@ -171,14 +171,14 @@ public interface HystrixCircuitBreaker {
          */
         protected HystrixCircuitBreakerImpl(HystrixCommandKey key, HystrixCommandGroupKey commandGroup, final HystrixCommandProperties properties, HystrixCommandMetrics metrics) {
             this.properties = properties;
-            this.metrics = metrics;
+            this.metrics = metrics; // 这是Command中的metrics对象,metrics对象也是commandKey维度的
 
             //On a timer, this will set the circuit between OPEN/CLOSED as command executions occur
             //在计时器上，这将在执行命令时设置打开/关闭之间的电路
-            Subscription s = subscribeToStream();
+            Subscription s = subscribeToStream();//订阅事件流
             activeSubscription.set(s);
         }
-
+        // 订阅事件流, 前面打的比方: 小溪汇成的河, 各事件以结构化数据汇入了Stream中
         private Subscription subscribeToStream() {
             /*
              * This stream will recalculate the OPEN/CLOSED status on every onNext from the health stream
@@ -186,6 +186,7 @@ public interface HystrixCircuitBreaker {
              */
             return metrics.getHealthCountsStream()
                     .observe()
+                    // 利用数据统计的结果 HealthCounts, 实现熔断器。HealthCounts表示一个滑动窗口内的统计数据
                     .subscribe(new Subscriber<HealthCounts>() {
                         @Override
                         public void onCompleted() {
@@ -199,24 +200,15 @@ public interface HystrixCircuitBreaker {
 
                         @Override
                         public void onNext(HealthCounts hc) {
-                            // check if we are past the statisticalWindowVolumeThreshold
-                            //如果请求总数小于 statisticalWindowVolumeThreshold，则返回false，标示不打开断路器
+                            // 检查是否达到最小请求数,默认20个; 未达到的话即使请求全部失败也不会熔断
                             if (hc.getTotalRequests() < properties.circuitBreakerRequestVolumeThreshold().get()) {
-                                // we are not past the minimum volume threshold for the stat window,
-                                // so no change to circuit status.
-                                // if it was CLOSED, it stays CLOSED
-                                // if it was half-open, we need to wait for a successful command execution
-                                // if it was open, we need to wait for sleep window to elapse
-                            } else {//如果请求总数大于 statisticalWindowVolumeThreshold
+
+                            } else {//错误百分比未达到设定的阀值
                                 //如果当前错误的百分比在指定的值之内，则不打开断路器
                                 if (hc.getErrorPercentage() < properties.circuitBreakerErrorThresholdPercentage().get()) {
-                                    //we are not past the minimum error threshold for the stat window,
-                                    // so no change to circuit status.
-                                    // if it was CLOSED, it stays CLOSED
-                                    // if it was half-open, we need to wait for a successful command execution
-                                    // if it was open, we need to wait for sleep window to elapse
+                                    // 啥也不做
                                 } else {////如果当前错误的百分比在指定的值之外，则打开断路器，修改断路器打开状态，并记录打开断路器的时间
-                                    // our failure rate is too high, we need to set the state to OPEN
+                                    // 错误率过高, 进行熔断
                                     if (status.compareAndSet(Status.CLOSED, Status.OPEN)) {
                                         circuitOpened.set(System.currentTimeMillis());
                                     }

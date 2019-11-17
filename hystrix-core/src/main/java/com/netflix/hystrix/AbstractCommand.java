@@ -181,11 +181,12 @@ import java.util.concurrent.atomic.AtomicReference;
         this.commandKey = initCommandKey(key, getClass());//初始化commandKey
         //初始化HystrixCommandProperties，这个对象会根据CommandKey进行缓存到本地内存
         this.properties = initCommandProperties(this.commandKey, propertiesStrategy, commandPropertiesDefaults);
-        //创建并绑定一个ThreadPoolKey
+        //创建并绑定一个ThreadPoolKey。默认和groupKey一样
         this.threadPoolKey = initThreadPoolKey(threadPoolKey, this.commandGroup, this.properties.executionIsolationThreadPoolKeyOverride().get());
-        //创建并绑定HystrixCommandMetrics，这是一个统计流类实现类
+        //创建并绑定HystrixCommandMetrics，这是一个统计流类实现类。每个 CommandKey对应一个HystrixCommandMetrics
         this.metrics = initMetrics(metrics, this.commandGroup, this.threadPoolKey, this.commandKey, this.properties);
-        //创建一个熔断器
+        //创建一个熔断器，每个CommandKey对应一个熔断器。生成的熔断器默认会订阅 HystrixCommandMetrics
+        //同时熔断器会订阅一个事件流，用于检查熔断器的状态
         this.circuitBreaker = initCircuitBreaker(this.properties.circuitBreakerEnabled().get(), circuitBreaker, this.commandGroup, this.commandKey, this.properties, this.metrics);
         //初始化一个线程池
         this.threadPool = initThreadPool(threadPool, this.threadPoolKey, threadPoolPropertiesDefaults);
@@ -739,7 +740,9 @@ import java.util.concurrent.atomic.AtomicReference;
                 }
             }
         };
-
+        /***
+         * 如果执行失败的话，会回调该方法
+         */
         final Func1<Throwable, Observable<R>> handleFallback = new Func1<Throwable, Observable<R>>() {
             @Override
             public Observable<R> call(Throwable t) {
@@ -800,6 +803,7 @@ import java.util.concurrent.atomic.AtomicReference;
         //根据是线程隔离或者信号量隔离，采取不同的执行策略
         if (properties.executionIsolationStrategy().get() == ExecutionIsolationStrategy.THREAD) {//线程池隔离
             // mark that we are executing in a thread (even if we end up being rejected we still were a THREAD execution and not SEMAPHORE)
+            //标记我们正在线程中执行（即使最终被拒绝，我们仍然是THREAD执行，而不是SEMAPHORE）
             return Observable.defer(new Func0<Observable<R>>() {
                 @Override
                 public Observable<R> call() {

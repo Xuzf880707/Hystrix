@@ -389,7 +389,7 @@ public class HystrixCommandAspect {
     }
 
     /***
-     * 开始为MetaHolder.Builder设置默认的 CommandProperties
+     * 开始为MetaHolder.Builder设置默认的 CommandProperties。主要是负责解析类的DefaultProperties注解
      * @param builder  MetaHolder.Builder
      * @param declaringClass 添加hystrixCommand注解的类
      * @param joinPoint 切点
@@ -401,7 +401,7 @@ public class HystrixCommandAspect {
     private static MetaHolder.Builder setDefaultProperties(MetaHolder.Builder builder, Class<?> declaringClass, final ProceedingJoinPoint joinPoint) {
         //获得类定义的默认注解：DefaultProperties
         Optional<DefaultProperties> defaultPropertiesOpt = AopUtils.getAnnotation(joinPoint, DefaultProperties.class);
-        //默认的groupKey是类名
+        //默认的groupKey是类名，不带包名，比如HelloService
         builder.defaultGroupKey(declaringClass.getSimpleName());
         //判断类上是否配置了默认注解：DefaultProperties
         if (defaultPropertiesOpt.isPresent()) {

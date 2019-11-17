@@ -139,7 +139,11 @@ public class HystrixCommandBuilderFactory {
          * metaHolder.getArgs()：添加了HystrixCommand注解的实体类对象的方法的参数
          *
          */
-        return new MethodExecutionAction(metaHolder.getObj(), metaHolder.getMethod(), metaHolder.getArgs(), metaHolder);
+        return new MethodExecutionAction(
+                metaHolder.getObj(),
+                metaHolder.getMethod(),
+                metaHolder.getArgs(),
+                metaHolder);
     }
 
     /***
@@ -150,11 +154,12 @@ public class HystrixCommandBuilderFactory {
      */
     private CommandAction createFallbackAction(MetaHolder metaHolder) {
         //根据HystrixCommand在类中查找相应的fallback方法，没有定义的话，返回默认的
-        //metaHolder.getObj().getClass()：HystrixCommand所对应的类
-        //metaHolder.getMethod()：HystrixCommand所对应的方法
-        //metaHolder.isExtendedFallback())：默认是false
-        FallbackMethod fallbackMethod = MethodProvider.getInstance().getFallbackMethod(metaHolder.getObj().getClass(),
-                metaHolder.getMethod(), metaHolder.isExtendedFallback());
+        FallbackMethod fallbackMethod = MethodProvider.getInstance()
+                                        .getFallbackMethod(
+                                                metaHolder.getObj().getClass(),//HystrixCommand所对应的类
+                                                metaHolder.getMethod(), //HystrixCommand所对应的方法
+                                                metaHolder.isExtendedFallback()//默认是false
+                                        );
         //校验fallback方法参数和真正的调用方法的参数的返回类型
         ////检查fallback方法和commandMethod的返回值是否匹配
         fallbackMethod.validateReturnType(metaHolder.getMethod());

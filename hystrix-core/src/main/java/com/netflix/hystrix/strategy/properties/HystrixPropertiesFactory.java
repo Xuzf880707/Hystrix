@@ -47,6 +47,11 @@ public class HystrixPropertiesFactory {
     }
 
     // String is CommandKey.name() (we can't use CommandKey directly as we can't guarantee it implements hashcode/equals correctly)
+    /***
+     * 全局缓存每个commandKey的 CommandParoperties :
+     *  key：commandKey
+     *  value：CommandParoperties
+     */
     private static final ConcurrentHashMap<String, HystrixCommandProperties> commandProperties = new ConcurrentHashMap<String, HystrixCommandProperties>();
 
     /**

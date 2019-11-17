@@ -241,7 +241,8 @@ public final class MethodProvider {
             //如果指定了exFallbackMethod，则返回exFallbackMethod，不然就判断fMethod，如果都没有的话，则返回null
             Method method = exFallbackMethod.or(fMethod).orNull();
             if (method == null) {//如果都没指定的话，则报错
-                throw new FallbackDefinitionException("fallback method wasn't found: " + name + "(" + Arrays.toString(fallbackParameterTypes) + ")");
+                throw new FallbackDefinitionException("fallback method wasn't found: " + name +
+                        "(" + Arrays.toString(fallbackParameterTypes) + ")");
             }
             return new FallbackMethod(method, exFallbackMethod.isPresent(), isDefault());
         }
