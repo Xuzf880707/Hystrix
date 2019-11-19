@@ -20,6 +20,15 @@ import rx.Observable;
 /**
  * Base interface for a stream of {@link com.netflix.hystrix.HystrixEventType}s.  Allows consumption by individual
  * {@link com.netflix.hystrix.HystrixEventType} or by time-based bucketing of events
+ *
+ * HystrixEventStream专门用于处理command级别的数据，它有如下几个子类：
+ *      HystrixCommandCompletionStream
+ *      HystrixCommandStartStream
+ *      HystrixThreadPoolCompletionStream
+ *      HystrixThreadPoolStartStream
+ *      HystrixCollapserEventStream
+ *
+ *      这几个子类都是用来处理特定类型事件的工具，以 HystrixCommandCompletionStream 为例子，这些子类的结构都很类似，可以接收数据，并将数据提供给其他消费者。
  */
 public interface HystrixEventStream<E extends HystrixEvent> {
 

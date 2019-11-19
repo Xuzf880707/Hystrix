@@ -200,7 +200,9 @@ public class HystrixContextScheduler extends Scheduler {
 
         @Override
         public void unsubscribe() {
+            //从线程池的阻塞队列中移除任务
             executor.remove(f);
+            //如果任务超时，即使任务已经开始执行，也将线程的中断标记位设为true
             if (shouldInterruptThread.call()) {
                 f.cancel(true);
             } else {

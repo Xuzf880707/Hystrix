@@ -38,6 +38,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Used by {@link HystrixCommand} to record metrics.
+ * HystrixCommandMetrics工具提供了基本的方法供HystrixCommand使用，而HystrixCommandMetrics实际使用的
+ *  是 HystrixThreadEventStream，它是线程级别的处理者，每个线程拥有自己的 HystrixThreadEventStream
+ *
  */
 public class HystrixCommandMetrics extends HystrixMetrics {
 
@@ -359,11 +362,14 @@ public class HystrixCommandMetrics extends HystrixMetrics {
 
     /* package-private */ void markCommandStart(HystrixCommandKey commandKey, HystrixThreadPoolKey threadPoolKey, HystrixCommandProperties.ExecutionIsolationStrategy isolationStrategy) {
         int currentCount = concurrentExecutionCount.incrementAndGet();
-        HystrixThreadEventStream.getInstance().commandExecutionStarted(commandKey, threadPoolKey, isolationStrategy, currentCount);
+        //一个线程对应一个 HystrixThreadEventStream
+        HystrixThreadEventStream.getInstance()//从ThreadLocal中获取HystrixThreadEventStream
+                .commandExecutionStarted(commandKey, threadPoolKey, isolationStrategy, currentCount);
     }
 
     /* package-private */ void markCommandDone(ExecutionResult executionResult, HystrixCommandKey commandKey, HystrixThreadPoolKey threadPoolKey, boolean executionStarted) {
-        HystrixThreadEventStream.getInstance().executionDone(executionResult, commandKey, threadPoolKey);
+        HystrixThreadEventStream.getInstance()//从ThreadLocal中获取HystrixThreadEventStream
+                .executionDone(executionResult, commandKey, threadPoolKey);
         if (executionStarted) {
             concurrentExecutionCount.decrementAndGet();
         }

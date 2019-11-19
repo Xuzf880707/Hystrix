@@ -25,7 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data class which gets fed into event stream when a command completes (with any of the outcomes in {@link HystrixEventType}).
+ * Data class which gets fed into event stream when a command completes (with any of the outcomes in {@link HystrixEventType}).,
+ *
+ * 我们可以发现，HystrixCommandCompletion是HystrixCommandEvent中的一种
  */
 public class HystrixCommandCompletion extends HystrixCommandEvent {
     protected final ExecutionResult executionResult;
